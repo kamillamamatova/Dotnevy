@@ -9,25 +9,130 @@ datasource db {
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
-enum RepoRole {
+// Mirrors GitHub's actual collaborator permission levels exactly.
+// Keeping the full set avoids lossy mapping when syncing from GitHub's API.
+enum GitHubPermission {
+  NONE
   READ
+  TRIAGE
   WRITE
+  MAINTAIN
   ADMIN
 }
 
-// ─── Models ───────────────────────────────────────────────────────────────────
+// Typed audit actions so queries and alerts can filter by action without
+// parsing free-form strings.
+enum AuditAction {
+  PULL_VARS
+  SET_VAR
+  DELETE_VAR
+  ROTATE_VAR
+  CREATE_ENVIRONMENT
+  DELETE_ENVIRONMENT
+  GRANT_ACCESS
+  REVOKE_ACCESS
+  REGISTER_REPO
+  REMOVE_REPO
+}
+
+// Signals the intended deployment tier for an environment.
+// CUSTOM covers anything else (e.g. "preview", "ci").
+enum EnvironmentType {
+  DEVELOPMENT
+  STAGING
+  PRODUCTION
+  CUSTOM
+}
+
+// Controls whether an AccessPolicy row grants or explicitly denies a capability.
+enum PolicyEffect {
+  ALLOW
+  DENY
+}
+
+// What capability an AccessPolicy row governs.
+enum PolicyAction {
+  PULL
+  WRITE
+}
+
+// ─── Auth / Session (next-auth Prisma adapter) ────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Core Domain ──────────────────────────────────────────────────────────────
 
 model User {
-  id          String   @id @default(cuid())
-  githubId    Int      @unique
-  githubLogin String
-  email       String?
-  avatarUrl   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String    @id @default(cuid())
+  // githubId is set on first OAuth sign-in via the Account relation.
+  // It is denormalized here for fast lookups when processing webhooks.
+  githubId      Int?      @unique
+  githubLogin   String?
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  memberships RepoMembership[]
-  auditLogs   AuditLog[]
+  accounts       Account[]
+  sessions       Session[]
+  memberships    RepoMembership[]
+  secretVersions SecretValue[]
+  auditLogs      AuditLog[]
+  accessPolicies AccessPolicy[]
+}
+
+// Stores GitHub App installation metadata per account (org or user).
+// One installation can cover many repos.
+model GitHubInstallation {
+  id             String    @id @default(cuid())
+  installationId Int       @unique   // GitHub's installation ID
+  accountLogin   String               // org or personal account login
+  accountType    String               // "Organization" | "User"
+  targetId       Int                  // GitHub account/org ID
+  suspended      Boolean   @default(false)
+  installedAt    DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  repos Repo[]
 }
 
 model Repo {
@@ -35,80 +140,146 @@ model Repo {
   githubRepoId   Int      @unique
   owner          String
   name           String
-  installationId Int
+  private        Boolean  @default(true)
+  installationId String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  envSets       EnvSet[]
+  installation  GitHubInstallation @relation(fields: [installationId], references: [id])
+  environments  Environment[]
   memberships   RepoMembership[]
   encryptionKey RepoEncryptionKey?
+  auditLogs     AuditLog[]
+
+  @@index([owner, name])
 }
 
 model RepoMembership {
-  id       String   @id @default(cuid())
-  userId   String
-  repoId   String
-  role     RepoRole
-  syncedAt DateTime @default(now())
+  id         String           @id @default(cuid())
+  userId     String
+  repoId     String
+  // Full GitHub permission level, not a collapsed 3-tier enum.
+  // The application layer maps this to capabilities.
+  permission GitHubPermission
+  syncedAt   DateTime         @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  repo Repo @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repo           Repo           @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  accessPolicies AccessPolicy[]
 
   @@unique([userId, repoId])
   @@index([repoId])
 }
 
-model EnvSet {
-  id        String   @id @default(cuid())
-  repoId    String
-  name      String   // e.g. "development", "staging"
-  minRole   RepoRole @default(READ)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Environment {
+  id          String          @id @default(cuid())
+  repoId      String
+  name        String          // e.g. "development", "staging"
+  type        EnvironmentType @default(CUSTOM)
+  // Minimum GitHub permission level required to pull from this environment.
+  minPermission GitHubPermission @default(READ)
+  description String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
-  vars EnvVar[]
-  repo Repo     @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  repo            Repo               @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  variableTemplates VariableTemplate[]
+  auditLogs       AuditLog[]
+  accessPolicies  AccessPolicy[]
 
   @@unique([repoId, name])
   @@index([repoId])
 }
 
-model EnvVar {
+// Defines a variable key and its metadata.
+// Separating template from value enables documentation, required-field validation,
+// and version history without re-encoding key names in every secret row.
+model VariableTemplate {
+  id            String   @id @default(cuid())
+  environmentId String
+  key           String   // e.g. DATABASE_URL — uppercase enforced at app layer
+  description   String?
+  isRequired    Boolean  @default(false)
+  // Non-secret default (e.g. PORT=3000) stored in plaintext.
+  // Leave null for secrets; use SecretValue rows for those.
+  defaultValue  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  environment   Environment   @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  secretValues  SecretValue[]
+
+  @@unique([environmentId, key])
+  @@index([environmentId])
+}
+
+// Each row is one version of a secret value.
+// All versions are retained; the current value is the row with the highest `version`
+// for a given templateId. No mutable isCurrent flag avoids race conditions on writes.
+model SecretValue {
   id           String   @id @default(cuid())
-  envSetId     String
-  key          String
+  templateId   String
   encryptedVal String   // AES-256-GCM ciphertext, base64
-  iv           String   // random IV, base64
-  updatedAt    DateTime @updatedAt
+  iv           String   // random 12-byte IV, base64
+  version      Int      // monotonically increasing per template
+  createdById  String
+  createdAt    DateTime @default(now())
 
-  envSet EnvSet @relation(fields: [envSetId], references: [id], onDelete: Cascade)
+  template    VariableTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  createdBy   User             @relation(fields: [createdById], references: [id])
 
-  @@unique([envSetId, key])
-  @@index([envSetId])
+  @@unique([templateId, version])
+  @@index([templateId])
 }
 
 // Encrypted per-repo data encryption key (DEK).
-// The DEK itself is encrypted with the server master key.
+// The DEK is wrapped with the server-side master key held in an env var.
 model RepoEncryptionKey {
   id           String   @id @default(cuid())
   repoId       String   @unique
-  encryptedKey String   // base64 AES-256-GCM(DEK, masterKey)
+  encryptedKey String   // base64: AES-256-GCM(DEK, masterKey)
   iv           String   // base64
   createdAt    DateTime @default(now())
 
   repo Repo @relation(fields: [repoId], references: [id], onDelete: Cascade)
 }
 
-model AuditLog {
-  id        String   @id @default(cuid())
-  userId    String
-  repoId    String
-  action    String   // "pull" | "set" | "delete" | "grant" | "revoke"
-  detail    Json?
-  createdAt DateTime @default(now())
+// Fine-grained overrides on top of RepoMembership role.
+// Example: deny a WRITE-level contractor from pulling the production environment.
+// If no policy matches, the system falls back to the membership permission level.
+model AccessPolicy {
+  id           String           @id @default(cuid())
+  repoId       String           // scope: always scoped to a repo
+  environmentId String?         // null = applies to all environments in the repo
+  membershipId String?          // null = applies to any member with this userId
+  userId       String
+  action       PolicyAction
+  effect       PolicyEffect
+  createdAt    DateTime         @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  repo        Repo            @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  environment Environment?    @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  membership  RepoMembership? @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([repoId, userId])
+  @@index([environmentId, userId])
+}
+
+model AuditLog {
+  id            String      @id @default(cuid())
+  userId        String
+  repoId        String
+  environmentId String?     // null for repo-level actions
+  action        AuditAction
+  detail        Json?       // arbitrary context (key name, version number, etc.)
+  createdAt     DateTime    @default(now())
+
+  user        User         @relation(fields: [userId], references: [id])
+  repo        Repo         @relation(fields: [repoId], references: [id])
+  environment Environment? @relation(fields: [environmentId], references: [id])
 
   @@index([repoId, createdAt])
-  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([environmentId, createdAt])
 }

@@ -13,5 +13,21 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma
 }
 
-export { RepoRole } from '@prisma/client'
-export type { User, Repo, RepoMembership, EnvSet, EnvVar, AuditLog } from '@prisma/client'
+// Enums
+export { GitHubPermission, AuditAction, EnvironmentType, PolicyEffect, PolicyAction } from '@prisma/client'
+
+// Types
+export type {
+  User,
+  Account,
+  Session,
+  GitHubInstallation,
+  Repo,
+  RepoMembership,
+  Environment,
+  VariableTemplate,
+  SecretValue,
+  RepoEncryptionKey,
+  AccessPolicy,
+  AuditLog,
+} from '@prisma/client'
