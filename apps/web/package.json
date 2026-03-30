@@ -1,0 +1,34 @@
+{
+  "name": "@pullenv/web",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "cd ../../packages/db && prisma generate",
+    "db:push": "cd ../../packages/db && prisma db push",
+    "db:migrate": "cd ../../packages/db && prisma migrate dev"
+  },
+  "dependencies": {
+    "@pullenv/db": "*",
+    "@pullenv/shared": "*",
+    "next": "^15.0.0",
+    "next-auth": "^4.24.10",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "jose": "^5.9.6",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tailwindcss": "^3.4.13",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "typescript": "^5.6.3"
+  }
+}

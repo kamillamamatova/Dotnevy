@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum RepoRole {
+  READ
+  WRITE
+  ADMIN
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id          String   @id @default(cuid())
+  githubId    Int      @unique
+  githubLogin String
+  email       String?
+  avatarUrl   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  memberships RepoMembership[]
+  auditLogs   AuditLog[]
+}
+
+model Repo {
+  id             String   @id @default(cuid())
+  githubRepoId   Int      @unique
+  owner          String
+  name           String
+  installationId Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  envSets       EnvSet[]
+  memberships   RepoMembership[]
+  encryptionKey RepoEncryptionKey?
+}
+
+model RepoMembership {
+  id       String   @id @default(cuid())
+  userId   String
+  repoId   String
+  role     RepoRole
+  syncedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repo Repo @relation(fields: [repoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, repoId])
+  @@index([repoId])
+}
+
+model EnvSet {
+  id        String   @id @default(cuid())
+  repoId    String
+  name      String   // e.g. "development", "staging"
+  minRole   RepoRole @default(READ)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vars EnvVar[]
+  repo Repo     @relation(fields: [repoId], references: [id], onDelete: Cascade)
+
+  @@unique([repoId, name])
+  @@index([repoId])
+}
+
+model EnvVar {
+  id           String   @id @default(cuid())
+  envSetId     String
+  key          String
+  encryptedVal String   // AES-256-GCM ciphertext, base64
+  iv           String   // random IV, base64
+  updatedAt    DateTime @updatedAt
+
+  envSet EnvSet @relation(fields: [envSetId], references: [id], onDelete: Cascade)
+
+  @@unique([envSetId, key])
+  @@index([envSetId])
+}
+
+// Encrypted per-repo data encryption key (DEK).
+// The DEK itself is encrypted with the server master key.
+model RepoEncryptionKey {
+  id           String   @id @default(cuid())
+  repoId       String   @unique
+  encryptedKey String   // base64 AES-256-GCM(DEK, masterKey)
+  iv           String   // base64
+  createdAt    DateTime @default(now())
+
+  repo Repo @relation(fields: [repoId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  repoId    String
+  action    String   // "pull" | "set" | "delete" | "grant" | "revoke"
+  detail    Json?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([repoId, createdAt])
+  @@index([userId])
+}

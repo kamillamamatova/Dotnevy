@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+.next/
+dist/
+out/
+build/
+
+# Environment variables (never commit)
+.env
+.env.local
+.env.*.local
+
+# Turbo cache
+.turbo/
+
+# Misc
+.DS_Store
+*.tsbuildinfo
+
+# Prisma
+prisma/migrations/
+
+# CLI credentials
+.pullenv/
