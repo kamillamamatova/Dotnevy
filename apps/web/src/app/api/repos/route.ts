@@ -3,9 +3,11 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@pullenv/db'
 import { RegisterRepoSchema } from '@pullenv/shared'
+import { permissionToRole } from '@/lib/github'
 
 // GET /api/repos
-// Query: ?githubRemote=<url>  — used by the CLI to resolve a repo by remote URL
+// Returns repos the authenticated user is a member of.
+// Query: ?githubRemote=<url>  — used by the CLI to resolve a repo by git remote URL
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -13,7 +15,6 @@ export async function GET(req: NextRequest) {
   const githubRemote = req.nextUrl.searchParams.get('githubRemote')
 
   if (githubRemote) {
-    // Normalize SSH and HTTPS remote URLs to owner/name
     const parsed = parseGitHubRemote(githubRemote)
     if (!parsed) {
       return NextResponse.json({ error: 'Invalid GitHub remote' }, { status: 400 })
@@ -27,16 +28,21 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(repo)
   }
 
-  // Otherwise list repos the user is a member of
   const memberships = await prisma.repoMembership.findMany({
     where: { userId: session.user.id },
     include: { repo: true },
+    orderBy: { repo: { updatedAt: 'desc' } },
   })
 
-  return NextResponse.json(memberships.map((m) => ({ ...m.repo, role: m.role })))
+  // Map the stored GitHubPermission to the 3-tier internal role for the response
+  return NextResponse.json(
+    memberships.map((m) => ({ ...m.repo, role: permissionToRole(m.permission) })),
+  )
 }
 
 // POST /api/repos
+// Programmatic/webhook registration of a repo with a known GitHub App installation ID.
+// For the web connect flow (no known installation ID), use POST /api/repos/connect instead.
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -47,21 +53,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid input', message: result.error.message }, { status: 400 })
   }
 
+  // RegisterRepoSchema.installationId is the numeric GitHub App installation ID.
+  // We look up the GitHubInstallation record by that ID to get the DB CUID.
+  const installation = await prisma.gitHubInstallation.findUnique({
+    where: { installationId: result.data.installationId },
+  })
+  if (!installation) {
+    return NextResponse.json(
+      { error: 'Installation not found', message: 'No GitHub App installation found for that ID.' },
+      { status: 404 },
+    )
+  }
+
   const repo = await prisma.repo.upsert({
     where: { githubRepoId: result.data.githubRepoId },
-    create: result.data,
-    update: { installationId: result.data.installationId },
+    create: {
+      githubRepoId: result.data.githubRepoId,
+      owner: result.data.owner,
+      name: result.data.name,
+      installationId: installation.id,
+    },
+    update: { installationId: installation.id },
   })
 
   return NextResponse.json(repo, { status: 201 })
 }
 
 function parseGitHubRemote(remote: string): { owner: string; name: string } | null {
-  // HTTPS: https://github.com/owner/repo.git
   const https = remote.match(/github\.com[/:]([^/]+)\/([^/.]+)(?:\.git)?$/)
   if (https) return { owner: https[1], name: https[2] }
 
-  // SSH: git@github.com:owner/repo.git
   const ssh = remote.match(/git@github\.com:([^/]+)\/([^/.]+)(?:\.git)?$/)
   if (ssh) return { owner: ssh[1], name: ssh[2] }
 

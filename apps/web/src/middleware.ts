@@ -1,6 +1,8 @@
 import { withAuth } from 'next-auth/middleware'
 
-// Protect all /dashboard routes
+// Protect all authenticated app routes.
+// /dashboard/*  — main dashboard and repo list
+// /repos/*      — connect flow and repo detail pages
 export default withAuth({
   pages: {
     signIn: '/login',
@@ -8,5 +10,5 @@ export default withAuth({
 })
 
 export const config = {
-  matcher: ['/dashboard/:path*'],
+  matcher: ['/dashboard/:path*', '/repos/:path*'],
 }
