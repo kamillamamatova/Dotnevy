@@ -70,6 +70,22 @@ export function mapRawPermission(raw: string): GitHubPermission {
 }
 
 /**
+ * Maps the internal 3-tier role to the closest GitHub permission for storage.
+ * READ → READ, WRITE → WRITE, ADMIN → ADMIN.
+ * Used when persisting a user-facing role choice into Environment.minPermission.
+ */
+export function roleToPermission(role: RepoRole): GitHubPermission {
+  switch (role) {
+    case 'READ':
+      return GitHubPermission.READ
+    case 'WRITE':
+      return GitHubPermission.WRITE
+    case 'ADMIN':
+      return GitHubPermission.ADMIN
+  }
+}
+
+/**
  * Collapses GitHub's 6-level permission to the 3-tier internal role.
  * Returns null for NONE — the caller should treat this as no access.
  */

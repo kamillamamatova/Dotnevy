@@ -4,7 +4,13 @@ import { prisma } from '@pullenv/db'
 import { notFound, redirect } from 'next/navigation'
 import { resolveUserRole } from '@/lib/membership'
 import { permissionToRole } from '@/lib/github'
-import { RepoDetailTabs, type Member, type ActivityEntry } from '@/components/repo-detail-tabs'
+import { canWrite } from '@pullenv/shared'
+import {
+  RepoDetailTabs,
+  type Member,
+  type ActivityEntry,
+  type EnvironmentSummary,
+} from '@/components/repo-detail-tabs'
 import Link from 'next/link'
 
 type Props = { params: { repoId: string } }
@@ -19,7 +25,23 @@ export default async function RepoDetailPage({ params }: Props) {
   const repo = await prisma.repo.findUnique({ where: { id: params.repoId } })
   if (!repo) notFound()
 
-  // Members with GitHub identity for the Access tab
+  // Environments for the Environments tab
+  const rawEnvs = await prisma.environment.findMany({
+    where: { repoId: params.repoId },
+    include: { _count: { select: { variableTemplates: true } } },
+    orderBy: { createdAt: 'asc' },
+  })
+
+  const environments: EnvironmentSummary[] = rawEnvs.map((e) => ({
+    id: e.id,
+    name: e.name,
+    type: e.type,
+    minRole: permissionToRole(e.minPermission) ?? 'READ',
+    description: e.description,
+    templateCount: e._count.variableTemplates,
+  }))
+
+  // Members for the Access tab
   const rawMembers = await prisma.repoMembership.findMany({
     where: { repoId: params.repoId },
     include: { user: { select: { githubLogin: true, image: true } } },
@@ -89,7 +111,13 @@ export default async function RepoDetailPage({ params }: Props) {
         </div>
       </div>
 
-      <RepoDetailTabs members={members} activity={activity} />
+      <RepoDetailTabs
+        repoId={params.repoId}
+        environments={environments}
+        members={members}
+        activity={activity}
+        canManage={canWrite(role)}
+      />
     </main>
   )
 }
