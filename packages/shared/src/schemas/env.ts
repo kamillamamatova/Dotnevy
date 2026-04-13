@@ -59,6 +59,21 @@ export const UpdateTemplateSchema = z.object({
 export type CreateTemplateInput = z.infer<typeof CreateTemplateSchema>
 export type UpdateTemplateInput = z.infer<typeof UpdateTemplateSchema>
 
+// ─── Secret values ────────────────────────────────────────────────────────────
+
+/**
+ * Sets or updates the secret value for a specific template.
+ * The server encrypts the value before persisting — the plaintext never
+ * touches the database.
+ */
+export const SetSecretValueSchema = z.object({
+  templateId: z.string().cuid(),
+  // Empty string is intentionally valid (it explicitly clears a value).
+  value: z.string(),
+})
+
+export type SetSecretValueInput = z.infer<typeof SetSecretValueSchema>
+
 // ─── Legacy env-set schemas (CLI compatibility) ───────────────────────────────
 // The original API used "envsets" terminology. These are kept so the CLI package
 // compiles while it is updated in a future phase. The web app uses

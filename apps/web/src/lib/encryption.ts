@@ -1,3 +1,44 @@
+/**
+ * Encryption service — application-level encryption for secret values.
+ *
+ * ─── Architecture: envelope encryption ───────────────────────────────────────
+ *
+ * Two key tiers:
+ *
+ *   1. MASTER KEY  (MASTER_ENCRYPTION_KEY env var, never stored in DB)
+ *      A 32-byte AES-256 key held only in the process environment.
+ *      Its sole job is to wrap/unwrap per-repo DEKs.
+ *
+ *   2. DATA ENCRYPTION KEY (DEK)  (stored encrypted in RepoEncryptionKey)
+ *      A 32-byte AES-256 key generated randomly per repo.
+ *      All SecretValue rows for a repo are encrypted with the repo's DEK.
+ *      The DEK is stored AES-256-GCM encrypted under the master key.
+ *
+ * Algorithm: AES-256-GCM with a random 12-byte IV per encryption.
+ * The GCM auth tag (16 bytes) is appended to the ciphertext in the same
+ * base64 blob so the IV and ciphertext are the only two fields needed for
+ * decryption.
+ *
+ * ─── Swappability ────────────────────────────────────────────────────────────
+ *
+ * The public API — `encrypt(repoId, value)` and `decrypt(repoId, ct, iv)` —
+ * is the seam. To swap to a KMS (e.g. AWS KMS, GCP CKMS):
+ *   - Replace `getRepoDek` with a KMS data-key call
+ *   - Keep the `encrypt` / `decrypt` signatures identical
+ *   - Existing ciphertext rows remain decryptable during migration because
+ *     the DEK is always fetched fresh; you'd just change how the DEK is
+ *     protected, then re-encrypt all DEKs under the new wrapping key.
+ *
+ * ─── What is NOT covered here ────────────────────────────────────────────────
+ *
+ * - Key rotation: rotating MASTER_ENCRYPTION_KEY requires re-wrapping all
+ *   RepoEncryptionKey rows. See SECURITY.md (future) for the rotation plan.
+ * - HSM / hardware key storage: not used in the MVP; add via KMS integration.
+ * - Client-side encryption: values are plaintext at the HTTP layer and only
+ *   encrypted before the DB write. TLS must be enforced end-to-end.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto'
 import { prisma } from '@pullenv/db'
 

@@ -4,9 +4,9 @@ import { prisma } from '@pullenv/db'
 import { notFound, redirect } from 'next/navigation'
 import { resolveUserRole } from '@/lib/membership'
 import { permissionToRole } from '@/lib/github'
-import { canWrite } from '@pullenv/shared'
+import { canWrite, canPull } from '@pullenv/shared'
 import Link from 'next/link'
-import { TemplateManager } from '@/components/template-manager'
+import { VariablePanel } from '@/components/variable-panel'
 import { DeleteEnvButton } from '@/components/delete-env-button'
 
 type Props = { params: { repoId: string; envId: string } }
@@ -36,22 +36,45 @@ export default async function EnvironmentPage({ params }: Props) {
 
   const env = await prisma.environment.findUnique({
     where: { id: params.envId },
-    include: { variableTemplates: { orderBy: { key: 'asc' } } },
+    include: {
+      variableTemplates: {
+        orderBy: { key: 'asc' },
+        include: {
+          secretValues: {
+            orderBy: { version: 'desc' },
+            take: 1,
+            select: {
+              version: true,
+              createdAt: true,
+              createdBy: { select: { githubLogin: true } },
+              // encryptedVal and iv intentionally NOT selected
+            },
+          },
+        },
+      },
+    },
   })
   if (!env || env.repoId !== params.repoId) notFound()
 
   const minRole = permissionToRole(env.minPermission) ?? 'READ'
   const userCanManage = canWrite(role)
+  const userCanReveal = canPull(role, minRole)
   const typeInfo = ENV_TYPE_LABELS[env.type] ?? ENV_TYPE_LABELS.CUSTOM
 
-  const templates = env.variableTemplates.map((t) => ({
-    id: t.id,
-    key: t.key,
-    description: t.description,
-    isRequired: t.isRequired,
-    defaultValue: t.defaultValue,
-    createdAt: t.createdAt.toISOString(),
-  }))
+  const variables = env.variableTemplates.map((t) => {
+    const latest = t.secretValues[0] ?? null
+    return {
+      templateId: t.id,
+      key: t.key,
+      description: t.description,
+      isRequired: t.isRequired,
+      defaultValue: t.defaultValue,
+      hasSecret: latest !== null,
+      currentVersion: latest?.version ?? null,
+      updatedAt: latest?.createdAt.toISOString() ?? null,
+      updatedBy: latest?.createdBy.githubLogin ?? null,
+    }
+  })
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
@@ -93,22 +116,23 @@ export default async function EnvironmentPage({ params }: Props) {
         )}
       </div>
 
-      {/* Variable templates */}
+      {/* Variables */}
       <section>
         <div className="mb-5">
-          <h2 className="text-lg font-semibold text-gray-900">Variable Templates</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Variables</h2>
           <p className="mt-0.5 text-sm text-gray-500">
-            Define which variables this environment expects. Think of this as a typed{' '}
-            <code className="rounded bg-gray-100 px-1 py-0.5 text-xs">.env.example</code>.
-            Secret values are managed separately.
+            Define the variables this environment expects and manage their encrypted secret values.
+            Raw values are never shown by default — use <strong>Reveal</strong> to view a value and
+            generate an audit log entry.
           </p>
         </div>
 
-        <TemplateManager
+        <VariablePanel
           repoId={params.repoId}
           envId={params.envId}
-          initialTemplates={templates}
+          initialVariables={variables}
           canManage={userCanManage}
+          canReveal={userCanReveal}
         />
       </section>
     </main>
