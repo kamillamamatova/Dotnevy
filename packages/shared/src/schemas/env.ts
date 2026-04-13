@@ -56,8 +56,19 @@ export const UpdateTemplateSchema = z.object({
   defaultValue: z.string().max(1000).nullable().optional(),
 })
 
+/**
+ * Updatable fields on an existing environment.
+ * The name and type fields are intentionally immutable after creation.
+ * minRole maps to the stored minPermission (GitHubPermission) at the API layer.
+ */
+export const UpdateEnvironmentSchema = z.object({
+  minRole: RepoRoleSchema.optional(),
+  description: z.string().max(500).nullable().optional(),
+})
+
 export type CreateTemplateInput = z.infer<typeof CreateTemplateSchema>
 export type UpdateTemplateInput = z.infer<typeof UpdateTemplateSchema>
+export type UpdateEnvironmentInput = z.infer<typeof UpdateEnvironmentSchema>
 
 // ─── Secret values ────────────────────────────────────────────────────────────
 

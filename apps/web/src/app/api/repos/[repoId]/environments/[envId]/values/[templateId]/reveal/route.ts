@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma, AuditAction } from '@pullenv/db'
-import { canPull } from '@pullenv/shared'
-import { resolveUserRole } from '@/lib/membership'
-import { permissionToRole } from '@/lib/github'
+import { evaluateAccess } from '@/lib/policy'
 import { decrypt } from '@/lib/encryption'
 
 // ─── Reveal endpoint ──────────────────────────────────────────────────────────
@@ -17,8 +15,9 @@ import { decrypt } from '@/lib/encryption'
 //      "dump all values" path through this endpoint
 //   3. The permission check (canPull) can be stricter than list access
 //
-// Permission: canPull(userRole, env.minRole)
-// A READ-level user cannot reveal a PRODUCTION environment (minRole=WRITE).
+// Permission: evaluated by policy engine (evaluateAccess 'PULL').
+// Checks role vs env.minPermission, explicit ALLOW/DENY overrides,
+// and live GitHub re-sync for PRODUCTION environments.
 //
 // Response headers include Cache-Control: no-store and
 // Content-Security-Policy to reduce plaintext leakage.
@@ -30,18 +29,16 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const role = await resolveUserRole(session.user.id, params.repoId)
-  if (!role) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  // Policy engine handles: membership check, live re-sync for PRODUCTION,
+  // explicit DENY/ALLOW overrides, and role vs env.minPermission fallback.
+  const access = await evaluateAccess(session.user.id, params.repoId, 'PULL', params.envId)
+  if (!access.allowed) {
+    return NextResponse.json({ error: 'Forbidden', reason: access.reason }, { status: 403 })
+  }
 
   const env = await prisma.environment.findUnique({ where: { id: params.envId } })
   if (!env || env.repoId !== params.repoId) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  }
-
-  // Enforce the environment-level minimum access requirement
-  const envMinRole = permissionToRole(env.minPermission) ?? 'READ'
-  if (!canPull(role, envMinRole)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const template = await prisma.variableTemplate.findUnique({

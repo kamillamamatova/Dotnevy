@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma, AuditAction } from '@pullenv/db'
-import { SetSecretValueSchema, canWrite } from '@pullenv/shared'
+import { SetSecretValueSchema } from '@pullenv/shared'
 import { resolveUserRole } from '@/lib/membership'
+import { evaluateAccess } from '@/lib/policy'
 import { encrypt } from '@/lib/encryption'
 
 // ─── Permission notes ─────────────────────────────────────────────────────────
@@ -74,8 +75,12 @@ export async function POST(req: NextRequest, { params }: Params) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const role = await resolveUserRole(session.user.id, params.repoId)
-  if (!role || !canWrite(role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  // Policy engine: checks WRITE permission with env-level overrides.
+  // A DENY WRITE policy can block a WRITE-role user from this specific environment.
+  const access = await evaluateAccess(session.user.id, params.repoId, 'WRITE', params.envId)
+  if (!access.allowed) {
+    return NextResponse.json({ error: 'Forbidden', reason: access.reason }, { status: 403 })
+  }
 
   const env = await prisma.environment.findUnique({ where: { id: params.envId } })
   if (!env || env.repoId !== params.repoId) {

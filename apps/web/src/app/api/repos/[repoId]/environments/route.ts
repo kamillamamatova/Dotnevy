@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma, AuditAction } from '@pullenv/db'
-import { CreateEnvironmentSchema, canWrite } from '@pullenv/shared'
+import { CreateEnvironmentSchema, canWrite, defaultMinRoleForEnvType } from '@pullenv/shared'
 import { resolveUserRole } from '@/lib/membership'
 import { permissionToRole, roleToPermission } from '@/lib/github'
 
@@ -52,7 +52,10 @@ export async function POST(req: NextRequest, { params }: Params) {
     )
   }
 
-  const { name, type, minRole, description } = parsed.data
+  const { name, type, description } = parsed.data
+  // Apply type-based default if the caller didn't specify an explicit minRole.
+  // PRODUCTION defaults to ADMIN, STAGING to WRITE, everything else to READ.
+  const minRole = parsed.data.minRole ?? defaultMinRoleForEnvType(type)
 
   const existing = await prisma.environment.findUnique({
     where: { repoId_name: { repoId: params.repoId, name } },

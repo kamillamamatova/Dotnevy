@@ -88,7 +88,9 @@ export function RepoDetailTabs({ repoId, environments, members, activity, canMan
             canManage={canManage}
           />
         )}
-        {activeTab === 'access' && <AccessTab members={members} />}
+        {activeTab === 'access' && (
+          <AccessTab repoId={repoId} members={members} canManage={canManage} />
+        )}
         {activeTab === 'activity' && <ActivityTab entries={activity} />}
       </div>
     </div>
@@ -210,32 +212,53 @@ const ROLE_STYLES: Record<string, string> = {
   ADMIN: 'bg-purple-50 text-purple-700',
 }
 
-function AccessTab({ members }: { members: Member[] }) {
-  if (members.length === 0) {
-    return <p className="text-sm text-gray-500">No members found.</p>
-  }
-
+function AccessTab({
+  repoId,
+  members,
+  canManage,
+}: {
+  repoId: string
+  members: Member[]
+  canManage: boolean
+}) {
   return (
-    <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
-      {members.map((m) => (
-        <li key={m.userId} className="flex items-center justify-between px-5 py-3">
-          <div className="flex items-center gap-3">
-            {m.image && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={m.image} alt={m.githubLogin ?? ''} className="h-6 w-6 rounded-full" />
-            )}
-            <span className="text-sm font-medium text-gray-900">
-              {m.githubLogin ? `@${m.githubLogin}` : m.userId}
-            </span>
-          </div>
-          {m.role && (
-            <span className={`rounded px-2 py-0.5 text-xs font-medium ${ROLE_STYLES[m.role]}`}>
-              {m.role}
-            </span>
-          )}
-        </li>
-      ))}
-    </ul>
+    <div>
+      {/* Quick member list */}
+      {members.length === 0 ? (
+        <p className="text-sm text-gray-500">No members found.</p>
+      ) : (
+        <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
+          {members.map((m) => (
+            <li key={m.userId} className="flex items-center justify-between px-5 py-3">
+              <div className="flex items-center gap-3">
+                {m.image && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={m.image} alt={m.githubLogin ?? ''} className="h-6 w-6 rounded-full" />
+                )}
+                <span className="text-sm font-medium text-gray-900">
+                  {m.githubLogin ? `@${m.githubLogin}` : m.userId}
+                </span>
+              </div>
+              {m.role && (
+                <span className={`rounded px-2 py-0.5 text-xs font-medium ${ROLE_STYLES[m.role]}`}>
+                  {m.role}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Link to full access management page */}
+      <div className="mt-4 flex justify-end">
+        <Link
+          href={`/repos/${repoId}/access`}
+          className="text-sm text-gray-500 hover:text-gray-800 underline-offset-2 hover:underline"
+        >
+          {canManage ? 'Manage access policies →' : 'View access policies →'}
+        </Link>
+      </div>
+    </div>
   )
 }
 
