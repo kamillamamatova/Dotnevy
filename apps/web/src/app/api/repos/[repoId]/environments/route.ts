@@ -5,6 +5,7 @@ import { prisma, AuditAction } from '@pullenv/db'
 import { CreateEnvironmentSchema, canWrite, defaultMinRoleForEnvType } from '@pullenv/shared'
 import { resolveUserRole } from '@/lib/membership'
 import { permissionToRole, roleToPermission } from '@/lib/github'
+import { resolveRequestAuth } from '@/lib/session'
 
 // ─── Permission note ──────────────────────────────────────────────────────────
 // GET  — any authenticated member (READ+)
@@ -14,11 +15,12 @@ import { permissionToRole, roleToPermission } from '@/lib/github'
 type Params = { params: { repoId: string } }
 
 // GET /api/repos/:repoId/environments
-export async function GET(_req: NextRequest, { params }: Params) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+// Accepts both NextAuth session cookies (web) and JWT Bearer tokens (CLI).
+export async function GET(req: NextRequest, { params }: Params) {
+  const auth = await resolveRequestAuth(req)
+  if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const role = await resolveUserRole(session.user.id, params.repoId)
+  const role = await resolveUserRole(auth.userId, params.repoId)
   if (!role) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const environments = await prisma.environment.findMany({

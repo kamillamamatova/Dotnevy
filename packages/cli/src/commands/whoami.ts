@@ -5,7 +5,10 @@ export function whoamiCommand(): void {
   const creds = readCredentials()
 
   if (!creds) {
-    error(`Not logged in. Run ${fmt.bold('pullenv login')} to authenticate.`)
+    blank()
+    error(`Not logged in.`)
+    hint(`Run ${fmt.bold('pullenv login')} to authenticate.`)
+    blank()
     process.exit(1)
   }
 

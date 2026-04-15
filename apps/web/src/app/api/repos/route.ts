@@ -4,13 +4,15 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@pullenv/db'
 import { RegisterRepoSchema } from '@pullenv/shared'
 import { permissionToRole } from '@/lib/github'
+import { resolveRequestAuth } from '@/lib/session'
 
 // GET /api/repos
 // Returns repos the authenticated user is a member of.
+// Accepts both NextAuth session cookies (web) and JWT Bearer tokens (CLI).
 // Query: ?githubRemote=<url>  — used by the CLI to resolve a repo by git remote URL
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await resolveRequestAuth(req)
+  if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const githubRemote = req.nextUrl.searchParams.get('githubRemote')
 
@@ -29,7 +31,7 @@ export async function GET(req: NextRequest) {
   }
 
   const memberships = await prisma.repoMembership.findMany({
-    where: { userId: session.user.id },
+    where: { userId: auth.userId },
     include: { repo: true },
     orderBy: { repo: { updatedAt: 'desc' } },
   })
@@ -43,6 +45,7 @@ export async function GET(req: NextRequest) {
 // POST /api/repos
 // Programmatic/webhook registration of a repo with a known GitHub App installation ID.
 // For the web connect flow (no known installation ID), use POST /api/repos/connect instead.
+// This is a web-only action (session required — CLI cannot register repos).
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

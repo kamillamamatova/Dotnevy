@@ -1,5 +1,5 @@
 import { execSync } from 'child_process'
-import { readCredentials, isTokenExpired, DEFAULT_API_BASE } from '../auth.js'
+import { readCredentials, isTokenExpired, DEFAULT_API_BASE, RefreshExpiredError } from '../auth.js'
 import { findProjectConfig } from '../config.js'
 import { success, error, warn, hint, blank, header, fmt } from '../output.js'
 

@@ -11,7 +11,26 @@ export async function loginCommand(): Promise<void> {
   // 1. Generate a random state token
   const state = crypto.randomUUID()
 
-  // 2. Open the browser for GitHub OAuth
+  // 2. Pre-register the state in the DB so the browser page can find it immediately.
+  //    Without this step there's a race: the browser could POST before the GET
+  //    creates the row (especially if the CLI-side GET polling loop hasn't run yet).
+  try {
+    const res = await fetch(`${apiBase}/api/tokens/cli`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state }),
+    })
+    if (!res.ok && res.status !== 409) {
+      // 409 = already registered (idempotent)
+      throw new Error(`Server responded with ${res.status}`)
+    }
+  } catch (e) {
+    error(`Could not reach ${apiBase}. Is the server running?`)
+    hint(`Set PULLENV_API_BASE to override the default URL.`)
+    process.exit(1)
+  }
+
+  // 3. Open the browser for GitHub OAuth
   const loginUrl = `${apiBase}/cli-auth?state=${state}`
   blank()
   info('Opening browser for GitHub login...')
@@ -27,9 +46,10 @@ export async function loginCommand(): Promise<void> {
     // Non-fatal: user can open manually
   }
 
-  // 3. Poll the API for the token
-  const spin = spinner('Waiting for authentication')
+  // 4. Poll the API for the token
+  const spin = spinner('Waiting for browser authentication')
   const deadline = Date.now() + POLL_TIMEOUT_MS
+  let lastStatus = ''
 
   while (Date.now() < deadline) {
     await sleep(POLL_INTERVAL_MS)
@@ -38,12 +58,23 @@ export async function loginCommand(): Promise<void> {
       const res = await fetch(`${apiBase}/api/tokens/cli?state=${state}`)
 
       if (res.status === 202) {
-        // Still waiting
+        // Still waiting — update spinner with time remaining
+        const remaining = Math.ceil((deadline - Date.now()) / 1000)
+        lastStatus = `Waiting for browser authentication (${remaining}s remaining)`
+        spin.update(lastStatus)
         continue
       }
 
+      if (res.status === 410) {
+        spin.stop()
+        error('The login request expired. Please run pullenv login again.')
+        process.exit(1)
+      }
+
       if (!res.ok) {
-        throw new Error(`Unexpected response: ${res.status}`)
+        spin.stop()
+        error(`Unexpected server response: ${res.status}`)
+        process.exit(1)
       }
 
       const data = (await res.json()) as {
@@ -62,7 +93,9 @@ export async function loginCommand(): Promise<void> {
       writeCredentials(creds)
       spin.stop()
       blank()
-      success(`Logged in! Run ${fmt.bold('pullenv repos')} to see your repos.`)
+      success(`Logged in successfully.`)
+      hint(`Run ${fmt.bold('pullenv repos')} to list your repos.`)
+      hint(`Run ${fmt.bold('pullenv pull')} inside a project to pull its env vars.`)
       return
     } catch {
       // Swallow transient network errors, keep polling
@@ -70,7 +103,7 @@ export async function loginCommand(): Promise<void> {
   }
 
   spin.stop()
-  error('Login timed out. Please try again.')
+  error('Login timed out after 2 minutes. Please try again.')
   process.exit(1)
 }
 

@@ -7,8 +7,8 @@ import { reposCommand } from './commands/repos.js'
 import { envsCommand } from './commands/envs.js'
 import { doctorCommand } from './commands/doctor.js'
 import { initCommand } from './commands/init.js'
-import { clearCredentials } from './auth.js'
-import { success, blank, fmt } from './output.js'
+import { clearCredentials, NotLoggedInError, RefreshExpiredError } from './auth.js'
+import { success, error, hint, blank, fmt } from './output.js'
 
 const program = new Command()
 
@@ -26,13 +26,15 @@ program
 
 program
   .command('logout')
-  .description('Remove stored credentials')
-  .action(() => {
-    clearCredentials()
-    blank()
-    success('Logged out.')
-    blank()
-  })
+  .description('Remove stored credentials and revoke the server-side session')
+  .action(
+    run(async () => {
+      await clearCredentials(true)
+      blank()
+      success('Logged out.')
+      blank()
+    }),
+  )
 
 program
   .command('whoami')
@@ -95,8 +97,15 @@ function run<T extends unknown[]>(fn: (...args: T) => Promise<void>) {
     try {
       await fn(...args)
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      console.error(`\n${fmt.red('✗')} ${message}\n`)
+      if (err instanceof NotLoggedInError || err instanceof RefreshExpiredError) {
+        blank()
+        error(err.message)
+        hint(`Run ${fmt.bold('pullenv login')} to authenticate.`)
+        blank()
+      } else {
+        const message = err instanceof Error ? err.message : String(err)
+        console.error(`\n${fmt.red('✗')} ${message}\n`)
+      }
       process.exit(1)
     }
   }
