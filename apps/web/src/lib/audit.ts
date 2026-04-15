@@ -26,13 +26,22 @@ import { prisma, AuditAction } from '@pullenv/db'
 
 // ─── Per-action detail shapes ─────────────────────────────────────────────────
 
-export type PullVarsDetail = {
-  key: string
-  version: number
-  environmentName: string
-  // 'reveal' = explicit UI reveal; 'cli' = CLI pull; 'export' = bulk export
-  source: 'reveal' | 'cli' | 'export'
-}
+export type PullVarsDetail =
+  | {
+      // Single-variable reveal (the /reveal endpoint)
+      key: string
+      version: number
+      environmentName: string
+      source: 'reveal'
+    }
+  | {
+      // Bulk pull (the /pull endpoint — CLI or web)
+      keys: string[]           // key names of successfully pulled variables
+      variableCount: number    // pulled count
+      skippedCount: number     // templates with no value or skipped by policy
+      environmentName: string
+      source: 'cli' | 'web' | 'export'
+    }
 
 export type SetVarDetail = {
   key: string
