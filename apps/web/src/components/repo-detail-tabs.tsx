@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import type { GitHubPermission } from '@pullenv/db'
 import type { RepoRole } from '@pullenv/shared'
+import { AuditLogList, type AuditEntry } from '@/components/audit-log-list'
 
 type Tab = 'environments' | 'access' | 'activity'
 
@@ -26,13 +27,9 @@ export interface Member {
   image: string | null
 }
 
-export interface ActivityEntry {
-  id: string
-  action: string
-  createdAt: string
-  githubLogin: string | null
-  detail: Record<string, unknown> | null
-}
+// Re-export AuditEntry as ActivityEntry so the server component (repo detail page)
+// doesn't need to import from two places.
+export type { AuditEntry as ActivityEntry } from '@/components/audit-log-list'
 
 // ─── Root component ───────────────────────────────────────────────────────────
 
@@ -40,7 +37,7 @@ interface Props {
   repoId: string
   environments: EnvironmentSummary[]
   members: Member[]
-  activity: ActivityEntry[]
+  activity: AuditEntry[]
   canManage: boolean
 }
 
@@ -91,7 +88,7 @@ export function RepoDetailTabs({ repoId, environments, members, activity, canMan
         {activeTab === 'access' && (
           <AccessTab repoId={repoId} members={members} canManage={canManage} />
         )}
-        {activeTab === 'activity' && <ActivityTab entries={activity} />}
+        {activeTab === 'activity' && <ActivityTab repoId={repoId} entries={activity} />}
       </div>
     </div>
   )
@@ -264,59 +261,24 @@ function AccessTab({
 
 // ─── Activity tab ─────────────────────────────────────────────────────────────
 
-const ACTION_LABELS: Record<string, string> = {
-  REGISTER_REPO: 'Connected repo',
-  REMOVE_REPO: 'Removed repo',
-  PULL_VARS: 'Pulled variables',
-  SET_VAR: 'Set variable',
-  DELETE_VAR: 'Deleted variable',
-  ROTATE_VAR: 'Rotated variable',
-  CREATE_ENVIRONMENT: 'Created environment',
-  DELETE_ENVIRONMENT: 'Deleted environment',
-  GRANT_ACCESS: 'Granted access',
-  REVOKE_ACCESS: 'Revoked access',
-}
-
-function ActivityTab({ entries }: { entries: ActivityEntry[] }) {
-  if (entries.length === 0) {
-    return <p className="text-sm text-gray-500">No activity yet.</p>
-  }
-
+function ActivityTab({ repoId, entries }: { repoId: string; entries: AuditEntry[] }) {
   return (
-    <ul className="space-y-1">
-      {entries.map((e) => (
-        <li
-          key={e.id}
-          className="flex items-center justify-between rounded-md px-4 py-2.5 text-sm hover:bg-gray-50"
+    <div>
+      <AuditLogList
+        entries={entries}
+        total={entries.length}
+        page={1}
+        pages={1}
+        compact
+      />
+      <div className="mt-4 flex justify-end">
+        <Link
+          href={`/repos/${repoId}/activity`}
+          className="text-sm text-gray-500 hover:text-gray-800 underline-offset-2 hover:underline"
         >
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-900">
-              {ACTION_LABELS[e.action] ?? e.action}
-            </span>
-            {e.detail && 'name' in e.detail && (
-              <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
-                {String(e.detail.name)}
-              </code>
-            )}
-            {e.detail && 'key' in e.detail && (
-              <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
-                {String(e.detail.key)}
-              </code>
-            )}
-            {e.githubLogin && (
-              <span className="text-gray-500">by @{e.githubLogin}</span>
-            )}
-          </div>
-          <time className="text-xs text-gray-400">
-            {new Date(e.createdAt).toLocaleDateString(undefined, {
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </time>
-        </li>
-      ))}
-    </ul>
+          View full audit trail →
+        </Link>
+      </div>
+    </div>
   )
 }

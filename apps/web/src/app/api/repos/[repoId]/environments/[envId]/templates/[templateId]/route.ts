@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@pullenv/db'
 import { UpdateTemplateSchema, canWrite } from '@pullenv/shared'
 import { resolveUserRole } from '@/lib/membership'
+import { logAudit } from '@/lib/audit'
 
 // ─── Permission note ──────────────────────────────────────────────────────────
 // PATCH  — members with WRITE or ADMIN role only
@@ -55,6 +56,24 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     },
   })
 
+  // Record which fields were touched — not their new values
+  const changes: Array<'description' | 'isRequired' | 'defaultValue'> = []
+  if (parsed.data.description !== undefined) changes.push('description')
+  if (parsed.data.isRequired !== undefined) changes.push('isRequired')
+  if (parsed.data.defaultValue !== undefined) changes.push('defaultValue')
+
+  if (changes.length > 0) {
+    await logAudit({
+      userId: session.user.id,
+      repoId: params.repoId,
+      environmentId: params.envId,
+      event: {
+        action: 'UPDATE_TEMPLATE',
+        detail: { key: template.key, changes, environmentName: template.environment.name },
+      },
+    })
+  }
+
   return NextResponse.json(updated)
 }
 
@@ -79,8 +98,27 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
+  // Count versions before the cascade so the audit record is meaningful
+  const versionCount = await prisma.secretValue.count({
+    where: { templateId: params.templateId },
+  })
+
   // Cascade deletes all SecretValue versions for this template
   await prisma.variableTemplate.delete({ where: { id: params.templateId } })
+
+  await logAudit({
+    userId: session.user.id,
+    repoId: params.repoId,
+    environmentId: params.envId,
+    event: {
+      action: 'DELETE_TEMPLATE',
+      detail: {
+        key: template.key,
+        versionCount,
+        environmentName: template.environment.name,
+      },
+    },
+  })
 
   return new NextResponse(null, { status: 204 })
 }

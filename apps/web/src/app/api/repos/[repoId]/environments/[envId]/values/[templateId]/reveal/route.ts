@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma, AuditAction } from '@pullenv/db'
+import { prisma } from '@pullenv/db'
 import { evaluateAccess } from '@/lib/policy'
 import { decrypt } from '@/lib/encryption'
+import { logAudit } from '@/lib/audit'
 
 // ─── Reveal endpoint ──────────────────────────────────────────────────────────
 //
@@ -68,13 +69,18 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const plaintext = await decrypt(params.repoId, secretValue.encryptedVal, secretValue.iv)
 
   // Every reveal is logged — this is the audit trail for secret access
-  await prisma.auditLog.create({
-    data: {
-      userId: session.user.id,
-      repoId: params.repoId,
-      environmentId: params.envId,
-      action: AuditAction.PULL_VARS,
-      detail: { key: template.key, version: secretValue.version, source: 'reveal' },
+  await logAudit({
+    userId: session.user.id,
+    repoId: params.repoId,
+    environmentId: params.envId,
+    event: {
+      action: 'PULL_VARS',
+      detail: {
+        key: template.key,
+        version: secretValue.version,
+        environmentName: env.name,
+        source: 'reveal',
+      },
     },
   })
 

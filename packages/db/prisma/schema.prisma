@@ -22,15 +22,32 @@ enum GitHubPermission {
 
 // Typed audit actions so queries and alerts can filter by action without
 // parsing free-form strings.
+//
+// Addition guide: add new values at the end of each logical group so the
+// PostgreSQL migration is a simple ALTER TYPE ... ADD VALUE statement.
+// Never remove or rename values — existing rows reference them.
 enum AuditAction {
-  PULL_VARS
-  SET_VAR
-  DELETE_VAR
-  ROTATE_VAR
+  // ── Secret value events ───────────────────────────────────────────────────
+  PULL_VARS       // a secret was revealed or pulled via CLI
+  SET_VAR         // a secret value was created/updated
+  DELETE_VAR      // a secret value history was explicitly cleared (future)
+  ROTATE_VAR      // the repo's encryption key was rotated (future)
+
+  // ── Variable template events ──────────────────────────────────────────────
+  CREATE_TEMPLATE // a new variable key definition was created
+  UPDATE_TEMPLATE // key metadata (description/required/default) was changed
+  DELETE_TEMPLATE // a variable key definition and all its versions were removed
+
+  // ── Environment events ────────────────────────────────────────────────────
   CREATE_ENVIRONMENT
+  UPDATE_ENVIRONMENT // minPermission or description changed
   DELETE_ENVIRONMENT
+
+  // ── Access control events ─────────────────────────────────────────────────
   GRANT_ACCESS
   REVOKE_ACCESS
+
+  // ── Repository lifecycle events ───────────────────────────────────────────
   REGISTER_REPO
   REMOVE_REPO
 }

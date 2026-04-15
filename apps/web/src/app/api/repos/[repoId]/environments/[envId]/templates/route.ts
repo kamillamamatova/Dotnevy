@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@pullenv/db'
 import { CreateTemplateSchema, canWrite } from '@pullenv/shared'
 import { resolveUserRole } from '@/lib/membership'
+import { logAudit } from '@/lib/audit'
 
 // ─── Permission note ──────────────────────────────────────────────────────────
 // GET  — any authenticated member (READ+)
@@ -80,6 +81,21 @@ export async function POST(req: NextRequest, { params }: Params) {
       description: description ?? null,
       isRequired,
       defaultValue: defaultValue ?? null,
+    },
+  })
+
+  await logAudit({
+    userId: session.user.id,
+    repoId: params.repoId,
+    environmentId: params.envId,
+    event: {
+      action: 'CREATE_TEMPLATE',
+      detail: {
+        key,
+        isRequired,
+        hasDefault: defaultValue != null,
+        environmentName: env.name,
+      },
     },
   })
 

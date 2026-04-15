@@ -55,19 +55,29 @@ export default async function RepoDetailPage({ params }: Props) {
     image: m.user.image,
   }))
 
-  // Recent activity for the Activity tab
+  // Recent activity for the Activity tab (last 10 — full history is at /activity)
   const rawActivity = await prisma.auditLog.findMany({
     where: { repoId: params.repoId },
     orderBy: { createdAt: 'desc' },
-    take: 20,
-    include: { user: { select: { githubLogin: true } } },
+    take: 10,
+    include: {
+      user: { select: { githubLogin: true, image: true } },
+      environment: { select: { name: true, type: true } },
+    },
   })
 
   const activity: ActivityEntry[] = rawActivity.map((a) => ({
     id: a.id,
     action: a.action,
     createdAt: a.createdAt.toISOString(),
-    githubLogin: a.user.githubLogin,
+    actor: {
+      userId: a.userId,
+      githubLogin: a.user.githubLogin,
+      image: a.user.image,
+    },
+    environment: a.environment
+      ? { id: a.environmentId, name: a.environment.name, type: a.environment.type }
+      : null,
     detail: a.detail as Record<string, unknown> | null,
   }))
 

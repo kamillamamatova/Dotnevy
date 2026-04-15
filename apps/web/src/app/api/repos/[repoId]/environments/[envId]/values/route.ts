@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma, AuditAction } from '@pullenv/db'
+import { prisma } from '@pullenv/db'
 import { SetSecretValueSchema } from '@pullenv/shared'
 import { resolveUserRole } from '@/lib/membership'
 import { evaluateAccess } from '@/lib/policy'
 import { encrypt } from '@/lib/encryption'
+import { logAudit } from '@/lib/audit'
 
 // ─── Permission notes ─────────────────────────────────────────────────────────
 //
@@ -131,13 +132,18 @@ export async function POST(req: NextRequest, { params }: Params) {
     },
   })
 
-  await prisma.auditLog.create({
-    data: {
-      userId: session.user.id,
-      repoId: params.repoId,
-      environmentId: params.envId,
-      action: AuditAction.SET_VAR,
-      detail: { key: template.key, version: nextVersion },
+  await logAudit({
+    userId: session.user.id,
+    repoId: params.repoId,
+    environmentId: params.envId,
+    event: {
+      action: 'SET_VAR',
+      detail: {
+        key: template.key,
+        version: nextVersion,
+        previousVersion: latest?.version ?? null,
+        environmentName: env.name,
+      },
     },
   })
 
