@@ -1,4 +1,5 @@
 import { DEFAULT_API_BASE, writeCredentials } from '../auth.js'
+import { success, error, hint, blank, info, spinner, fmt } from '../output.js'
 import type { CliCredentials } from '@pullenv/shared'
 
 const POLL_INTERVAL_MS = 3_000
@@ -12,8 +13,12 @@ export async function loginCommand(): Promise<void> {
 
   // 2. Open the browser for GitHub OAuth
   const loginUrl = `${apiBase}/cli-auth?state=${state}`
-  console.log(`\nOpening browser for GitHub login...\n  ${loginUrl}\n`)
-  console.log('If the browser did not open, visit the URL above manually.\n')
+  blank()
+  info('Opening browser for GitHub login...')
+  hint(loginUrl)
+  blank()
+  hint(`If the browser did not open, visit the URL above manually.`)
+  blank()
 
   try {
     const { default: open } = await import('open')
@@ -23,7 +28,7 @@ export async function loginCommand(): Promise<void> {
   }
 
   // 3. Poll the API for the token
-  console.log('Waiting for authentication...')
+  const spin = spinner('Waiting for authentication')
   const deadline = Date.now() + POLL_TIMEOUT_MS
 
   while (Date.now() < deadline) {
@@ -55,14 +60,18 @@ export async function loginCommand(): Promise<void> {
       }
 
       writeCredentials(creds)
-      console.log('\nLogged in successfully.')
+      spin.stop()
+      blank()
+      success(`Logged in! Run ${fmt.bold('pullenv repos')} to see your repos.`)
       return
-    } catch (err) {
+    } catch {
       // Swallow transient network errors, keep polling
     }
   }
 
-  throw new Error('Login timed out. Please try again.')
+  spin.stop()
+  error('Login timed out. Please try again.')
+  process.exit(1)
 }
 
 function sleep(ms: number): Promise<void> {
