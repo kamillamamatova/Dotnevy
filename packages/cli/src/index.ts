@@ -62,8 +62,9 @@ program
   .option('--repo <owner/name>', 'Repository slug (overrides .pullenv.json)')
   .option('--env <name>', 'Environment name (overrides .pullenv.json)')
   .option('--output <file>', 'Output file path (overrides .pullenv.json)', undefined)
-  .option('--force', 'Overwrite output file if it already exists', false)
-  .option('--dry-run', 'Show what would be written without creating any files', false)
+  .option('--force', 'Merge and apply server changes (preserves local-only vars)', false)
+  .option('--dry-run', 'Preview what would change without writing any files', false)
+  .option('--check', 'Exit 0 if the local file is up to date, 1 if out of sync (CI-friendly)', false)
   .action(
     run(
       (opts: {
@@ -72,6 +73,7 @@ program
         output?: string
         force: boolean
         dryRun: boolean
+        check: boolean
       }) => pullCommand(opts),
     ),
   )

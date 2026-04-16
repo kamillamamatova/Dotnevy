@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@pullenv/db'
 import { evaluateAccess } from '@/lib/policy'
 import { decrypt } from '@/lib/encryption'
 import { logAudit } from '@/lib/audit'
-import { verifyBearerToken } from '@/lib/cli-auth'
+import { resolveRequestAuth } from '@/lib/session'
 import type { PullEnvResponse, PullVariable, SkippedVariable } from '@pullenv/shared'
 
 // ─── Pull endpoint ────────────────────────────────────────────────────────────
@@ -54,10 +52,11 @@ type Params = { params: { repoId: string; envId: string } }
 
 export async function GET(req: NextRequest, { params }: Params) {
   // ── 1. Auth resolution ───────────────────────────────────────────────────
-  const { userId, source } = await resolveAuth(req) ?? {}
-  if (!userId) {
+  const auth = await resolveRequestAuth(req)
+  if (!auth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  const { userId, source } = auth
 
   // ── 2. Policy evaluation ─────────────────────────────────────────────────
   // The policy engine enforces: membership, live GitHub re-sync for PRODUCTION,
@@ -178,22 +177,3 @@ export async function GET(req: NextRequest, { params }: Params) {
   })
 }
 
-// ─── Auth helper ──────────────────────────────────────────────────────────────
-
-async function resolveAuth(
-  req: NextRequest,
-): Promise<{ userId: string; source: 'cli' | 'web' } | null> {
-  // Prefer session (web) — avoids an extra JWT parse on browser requests
-  const session = await getServerSession(authOptions)
-  if (session?.user?.id) {
-    return { userId: session.user.id, source: 'web' }
-  }
-
-  // Fall back to JWT Bearer (CLI)
-  const claims = await verifyBearerToken(req.headers.get('Authorization'))
-  if (claims?.sub) {
-    return { userId: claims.sub, source: 'cli' }
-  }
-
-  return null
-}
