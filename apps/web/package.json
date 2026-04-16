@@ -1,5 +1,5 @@
 {
-  "name": "@pullenv/web",
+  "name": "@dotenvy/web",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -13,8 +13,8 @@
     "db:migrate": "cd ../../packages/db && prisma migrate dev"
   },
   "dependencies": {
-    "@pullenv/db": "*",
-    "@pullenv/shared": "*",
+    "@dotenvy/db": "*",
+    "@dotenvy/shared": "*",
     "next": "^15.0.0",
     "next-auth": "^4.24.10",
     "react": "^19.0.0",

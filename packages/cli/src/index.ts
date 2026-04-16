@@ -13,7 +13,7 @@ import { success, error, hint, blank, fmt } from './output.js'
 const program = new Command()
 
 program
-  .name('pullenv')
+  .name('dotenvy')
   .description('Pull shared environment variables for local development')
   .version('0.1.0')
 
@@ -21,7 +21,7 @@ program
 
 program
   .command('login')
-  .description('Authenticate with GitHub via Pullenv')
+  .description('Authenticate with GitHub via Dotenvy')
   .action(run(loginCommand))
 
 program
@@ -59,9 +59,9 @@ program
 program
   .command('pull')
   .description('Pull decrypted variables into a local .env file')
-  .option('--repo <owner/name>', 'Repository slug (overrides .pullenv.json)')
-  .option('--env <name>', 'Environment name (overrides .pullenv.json)')
-  .option('--output <file>', 'Output file path (overrides .pullenv.json)', undefined)
+  .option('--repo <owner/name>', 'Repository slug (overrides .dotenvy.json)')
+  .option('--env <name>', 'Environment name (overrides .dotenvy.json)')
+  .option('--output <file>', 'Output file path (overrides .dotenvy.json)', undefined)
   .option('--force', 'Merge and apply server changes (preserves local-only vars)', false)
   .option('--dry-run', 'Preview what would change without writing any files', false)
   .option('--check', 'Exit 0 if the local file is up to date, 1 if out of sync (CI-friendly)', false)
@@ -82,7 +82,7 @@ program
 
 program
   .command('init')
-  .description('Create a .pullenv.json config for this project')
+  .description('Create a .dotenvy.json config for this project')
   .action(run(initCommand))
 
 program
@@ -102,7 +102,7 @@ function run<T extends unknown[]>(fn: (...args: T) => Promise<void>) {
       if (err instanceof NotLoggedInError || err instanceof RefreshExpiredError) {
         blank()
         error(err.message)
-        hint(`Run ${fmt.bold('pullenv login')} to authenticate.`)
+        hint(`Run ${fmt.bold('dotenvy login')} to authenticate.`)
         blank()
       } else {
         const message = err instanceof Error ? err.message : String(err)

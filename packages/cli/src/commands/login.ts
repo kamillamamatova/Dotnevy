@@ -1,6 +1,6 @@
 import { DEFAULT_API_BASE, writeCredentials } from '../auth.js'
 import { success, error, hint, blank, info, spinner, fmt } from '../output.js'
-import type { CliCredentials } from '@pullenv/shared'
+import type { CliCredentials } from '@dotenvy/shared'
 
 const POLL_INTERVAL_MS = 3_000
 const POLL_TIMEOUT_MS = 120_000
@@ -26,7 +26,7 @@ export async function loginCommand(): Promise<void> {
     }
   } catch (e) {
     error(`Could not reach ${apiBase}. Is the server running?`)
-    hint(`Set PULLENV_API_BASE to override the default URL.`)
+    hint(`Set DOTENVY_API_BASE to override the default URL.`)
     process.exit(1)
   }
 
@@ -67,7 +67,7 @@ export async function loginCommand(): Promise<void> {
 
       if (res.status === 410) {
         spin.stop()
-        error('The login request expired. Please run pullenv login again.')
+        error('The login request expired. Please run dotenvy login again.')
         process.exit(1)
       }
 
@@ -94,8 +94,8 @@ export async function loginCommand(): Promise<void> {
       spin.stop()
       blank()
       success(`Logged in successfully.`)
-      hint(`Run ${fmt.bold('pullenv repos')} to list your repos.`)
-      hint(`Run ${fmt.bold('pullenv pull')} inside a project to pull its env vars.`)
+      hint(`Run ${fmt.bold('dotenvy repos')} to list your repos.`)
+      hint(`Run ${fmt.bold('dotenvy pull')} inside a project to pull its env vars.`)
       return
     } catch {
       // Swallow transient network errors, keep polling

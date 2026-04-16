@@ -1,5 +1,5 @@
-import { prisma } from '@pullenv/db'
-import { type RepoRole, canAdmin, canWrite, canPull } from '@pullenv/shared'
+import { prisma } from '@dotenvy/db'
+import { type RepoRole, canAdmin, canWrite, canPull } from '@dotenvy/shared'
 import { permissionToRole } from '@/lib/github'
 import { syncMembership } from '@/lib/membership'
 

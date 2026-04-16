@@ -6,7 +6,7 @@ export async function reposCommand(): Promise<void> {
 
   if (repos.length === 0) {
     blank()
-    error('You are not a member of any repos in Pullenv.')
+    error('You are not a member of any repos in Dotenvy.')
     return
   }
 
@@ -25,5 +25,5 @@ export async function reposCommand(): Promise<void> {
     ],
   )
   blank()
-  success(`Run ${fmt.bold('pullenv envs --repo owner/name')} to see environments for a repo.`)
+  success(`Run ${fmt.bold('dotenvy envs --repo owner/name')} to see environments for a repo.`)
 }

@@ -1,10 +1,10 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@pullenv/db'
+import { prisma } from '@dotenvy/db'
 import { notFound, redirect } from 'next/navigation'
 import { resolveUserRole } from '@/lib/membership'
 import { permissionToRole } from '@/lib/github'
-import { canAdmin } from '@pullenv/shared'
+import { canAdmin } from '@dotenvy/shared'
 import Link from 'next/link'
 import {
   AccessPanel,

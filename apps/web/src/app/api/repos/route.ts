@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@pullenv/db'
-import { RegisterRepoSchema } from '@pullenv/shared'
+import { prisma } from '@dotenvy/db'
+import { RegisterRepoSchema } from '@dotenvy/shared'
 import { permissionToRole } from '@/lib/github'
 import { resolveRequestAuth } from '@/lib/session'
 

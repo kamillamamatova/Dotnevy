@@ -1,26 +1,26 @@
 /**
  * Credential storage and token lifecycle management.
  *
- * Credentials are stored in ~/.pullenv/credentials.json with mode 0600.
+ * Credentials are stored in ~/.dotenvy/credentials.json with mode 0600.
  * The file holds:
  *   - accessToken  — short-lived JWT (15 min), used as Bearer on every API call
  *   - refreshToken — opaque UUID (30 days), used to get a new access token
  *   - expiresAt    — ISO 8601 expiry of the access token
- *   - apiBase      — the Pullenv server URL (defaults to https://pullenv.app)
+ *   - apiBase      — the Dotenvy server URL (defaults to https://dotenvy.app)
  *
- * Security note: ~/.pullenv/credentials.json is mode 0600 (owner-read-only).
+ * Security note: ~/.dotenvy/credentials.json is mode 0600 (owner-read-only).
  * The access token is a signed JWT — it cannot be forged without CLI_JWT_SECRET.
  * The refresh token is stored in the DB and can be revoked server-side.
  */
 
 import fs from 'fs'
 import path from 'path'
-import type { CliCredentials } from '@pullenv/shared'
+import type { CliCredentials } from '@dotenvy/shared'
 
-const CREDENTIALS_DIR = path.join(process.env.HOME ?? '~', '.pullenv')
+const CREDENTIALS_DIR = path.join(process.env.HOME ?? '~', '.dotenvy')
 const CREDENTIALS_PATH = path.join(CREDENTIALS_DIR, 'credentials.json')
 
-export const DEFAULT_API_BASE = process.env.PULLENV_API_BASE ?? 'https://pullenv.app'
+export const DEFAULT_API_BASE = process.env.DOTENVY_API_BASE ?? 'https://dotenvy.app'
 
 // ─── Credential I/O ───────────────────────────────────────────────────────────
 
@@ -132,14 +132,14 @@ export async function getValidToken(): Promise<{ token: string; apiBase: string 
 
 export class NotLoggedInError extends Error {
   constructor() {
-    super('Not logged in. Run: pullenv login')
+    super('Not logged in. Run: dotenvy login')
     this.name = 'NotLoggedInError'
   }
 }
 
 export class RefreshExpiredError extends Error {
   constructor() {
-    super('Your session has expired. Run: pullenv login')
+    super('Your session has expired. Run: dotenvy login')
     this.name = 'RefreshExpiredError'
   }
 }

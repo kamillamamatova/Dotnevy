@@ -4,13 +4,13 @@ import { success, warn, error, hint, blank, header, prompt, promptList, fmt } fr
 
 export async function initCommand(): Promise<void> {
   blank()
-  header('pullenv init', 'Link this project to a Pullenv repo')
+  header('dotenvy init', 'Link this project to a Dotenvy repo')
   blank()
 
   // ── Warn if already initialized ────────────────────────────────────────────
   const existing = readProjectConfig()
   if (existing) {
-    warn(`.pullenv.json already exists (${existing.repoFullName} / ${existing.defaultEnv})`)
+    warn(`.dotenvy.json already exists (${existing.repoFullName} / ${existing.defaultEnv})`)
     const overwrite = await prompt('Overwrite? (y/N)', 'N')
     if (overwrite.toLowerCase() !== 'y') {
       hint('Aborted.')
@@ -25,7 +25,7 @@ export async function initCommand(): Promise<void> {
     repos = await listRepos()
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) {
-      error(`Not logged in. Run ${fmt.bold('pullenv login')} first.`)
+      error(`Not logged in. Run ${fmt.bold('dotenvy login')} first.`)
     } else {
       error(`Failed to fetch repos: ${(err as Error).message}`)
     }
@@ -33,8 +33,8 @@ export async function initCommand(): Promise<void> {
   }
 
   if (repos.length === 0) {
-    error('You are not a member of any repos in Pullenv.')
-    hint('Ask a repo admin to add you, then run pullenv init again.')
+    error('You are not a member of any repos in Dotenvy.')
+    hint('Ask a repo admin to add you, then run dotenvy init again.')
     process.exit(1)
   }
 
@@ -87,13 +87,13 @@ export async function initCommand(): Promise<void> {
     outputFile,
   })
 
-  success(`Created .pullenv.json`)
+  success(`Created .dotenvy.json`)
   hint(`Repo:        ${selectedRepo.owner}/${selectedRepo.name}`)
   hint(`Environment: ${selectedEnv.name}`)
   hint(`Output file: ${outputFile}`)
   blank()
-  hint(`Commit .pullenv.json to share this config with your team.`)
-  hint(`Run ${fmt.bold('pullenv pull')} to pull variables now.`)
+  hint(`Commit .dotenvy.json to share this config with your team.`)
+  hint(`Run ${fmt.bold('dotenvy pull')} to pull variables now.`)
 }
 
 /** Returns the index of the first 'development' or 'dev' env, or 0. */

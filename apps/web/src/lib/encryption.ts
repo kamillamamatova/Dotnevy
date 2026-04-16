@@ -40,7 +40,7 @@
  */
 
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto'
-import { prisma } from '@pullenv/db'
+import { prisma } from '@dotenvy/db'
 
 const ALGORITHM = 'aes-256-gcm'
 const KEY_BYTES = 32

@@ -3,7 +3,7 @@ import Link from 'next/link'
 export default function HomePage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 p-8">
-      <h1 className="text-4xl font-bold tracking-tight">Pullenv</h1>
+      <h1 className="text-4xl font-bold tracking-tight">Dotenvy</h1>
       <p className="max-w-md text-center text-gray-600">
         Secure shared environment variables for GitHub teams.
       </p>

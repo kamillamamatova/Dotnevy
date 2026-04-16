@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma, AuditAction, GitHubPermission } from '@pullenv/db'
+import { prisma, AuditAction, GitHubPermission } from '@dotenvy/db'
 import { z } from 'zod'
 import { getRepoInfo } from '@/lib/github'
 
@@ -19,7 +19,7 @@ import { getRepoInfo } from '@/lib/github'
 //     can be migrated to the real installation's DB id
 //
 // Why ADMIN for the connecting user?
-//   The person connecting the repo is declaring Pullenv access for it. Granting
+//   The person connecting the repo is declaring Dotenvy access for it. Granting
 //   ADMIN matches GitHub's own "if you can connect a service integration, you're
 //   an admin" model. Real permission levels are synced from GitHub once an App
 //   installation is in place.

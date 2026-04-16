@@ -29,7 +29,7 @@ export default function CliAuthPage() {
     if (sessionStatus === 'unauthenticated') {
       if (!state) {
         setStatus('error')
-        setErrorMessage('Missing state parameter. Please run pullenv login again.')
+        setErrorMessage('Missing state parameter. Please run dotenvy login again.')
         return
       }
       setStatus('redirecting')
@@ -85,7 +85,7 @@ export default function CliAuthPage() {
         <div className="rounded-full bg-red-100 p-4 text-2xl">✗</div>
         <h1 className="text-xl font-semibold text-gray-900">Authentication failed</h1>
         <p className="max-w-sm text-sm text-gray-500">{errorMessage}</p>
-        <p className="text-sm text-gray-400">Run <code className="rounded bg-gray-100 px-1 py-0.5">pullenv login</code> in your terminal to try again.</p>
+        <p className="text-sm text-gray-400">Run <code className="rounded bg-gray-100 px-1 py-0.5">dotenvy login</code> in your terminal to try again.</p>
       </main>
     )
   }

@@ -1,6 +1,6 @@
 import type { NextAuthOptions } from 'next-auth'
 import GitHubProvider from 'next-auth/providers/github'
-import { prisma } from '@pullenv/db'
+import { prisma } from '@dotenvy/db'
 
 // ─── Auth architecture notes ──────────────────────────────────────────────────
 //
@@ -11,7 +11,7 @@ import { prisma } from '@pullenv/db'
 //
 // GITHUB APP / REPO INSTALLATION (separate concern)
 // The GitHubInstallation model and /api/github/webhook route handle the
-// GitHub App installation flow that grants Pullenv access to repos.
+// GitHub App installation flow that grants Dotenvy access to repos.
 // A user can be signed in (user auth) independently of whether they or their
 // org has installed the GitHub App. The installationId on Repo ties the two
 // together: the user's identity is resolved from their session, while repo

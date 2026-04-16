@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHmac, timingSafeEqual } from 'crypto'
-import { prisma } from '@pullenv/db'
+import { prisma } from '@dotenvy/db'
 import { syncRepoMemberships } from '@/lib/membership'
 
 // ─── Webhook architecture notes ───────────────────────────────────────────────

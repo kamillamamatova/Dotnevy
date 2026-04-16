@@ -16,7 +16,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
-          <span className="font-semibold tracking-tight text-gray-900">Pullenv</span>
+          <span className="font-semibold tracking-tight text-gray-900">Dotenvy</span>
 
           {/* Signed-in identity strip */}
           <div className="flex items-center gap-3">

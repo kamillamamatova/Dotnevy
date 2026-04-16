@@ -7,7 +7,7 @@ export function whoamiCommand(): void {
   if (!creds) {
     blank()
     error(`Not logged in.`)
-    hint(`Run ${fmt.bold('pullenv login')} to authenticate.`)
+    hint(`Run ${fmt.bold('dotenvy login')} to authenticate.`)
     blank()
     process.exit(1)
   }
@@ -28,5 +28,5 @@ export function whoamiCommand(): void {
   )
   console.log(`  ${fmt.bold('API:')}      ${creds.apiBase}`)
   blank()
-  hint(`Run ${fmt.bold('pullenv repos')} to list your repos.`)
+  hint(`Run ${fmt.bold('dotenvy repos')} to list your repos.`)
 }

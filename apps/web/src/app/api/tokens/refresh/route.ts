@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { SignJWT } from 'jose'
-import { prisma } from '@pullenv/db'
+import { prisma } from '@dotenvy/db'
 import { permissionToRole } from '@/lib/github'
 
 // ─── POST /api/tokens/refresh ─────────────────────────────────────────────────

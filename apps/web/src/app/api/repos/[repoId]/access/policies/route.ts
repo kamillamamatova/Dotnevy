@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma, AuditAction } from '@pullenv/db'
-import { CreatePolicySchema, canAdmin } from '@pullenv/shared'
+import { prisma, AuditAction } from '@dotenvy/db'
+import { CreatePolicySchema, canAdmin } from '@dotenvy/shared'
 import { resolveUserRole } from '@/lib/membership'
 
 // POST /api/repos/:repoId/access/policies

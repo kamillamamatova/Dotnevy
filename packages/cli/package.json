@@ -1,9 +1,9 @@
 {
-  "name": "pullenv",
+  "name": "dotenvy",
   "version": "0.1.0",
   "description": "Pull shared environment variables for local development",
   "bin": {
-    "pullenv": "./dist/index.js"
+    "dotenvy": "./dist/index.js"
   },
   "main": "./dist/index.js",
   "files": ["dist"],
@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pullenv/shared": "*",
+    "@dotenvy/shared": "*",
     "commander": "^12.1.0",
     "open": "^10.1.0"
   },

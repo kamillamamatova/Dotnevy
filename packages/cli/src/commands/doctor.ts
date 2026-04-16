@@ -5,7 +5,7 @@ import { success, error, warn, hint, blank, header, fmt } from '../output.js'
 
 export async function doctorCommand(): Promise<void> {
   blank()
-  header('pullenv doctor', 'Checking your setup')
+  header('dotenvy doctor', 'Checking your setup')
   blank()
 
   let allGood = true
@@ -34,7 +34,7 @@ export async function doctorCommand(): Promise<void> {
   // ── 3. Credentials ─────────────────────────────────────────────────────────
   const creds = readCredentials()
   if (!creds) {
-    fail('Auth', `Not logged in — run ${fmt.bold('pullenv login')}`)
+    fail('Auth', `Not logged in — run ${fmt.bold('dotenvy login')}`)
     allGood = false
   } else if (isTokenExpired(creds)) {
     notice('Auth', `Token expired — will auto-refresh on next command`)
@@ -54,7 +54,7 @@ export async function doctorCommand(): Promise<void> {
       allGood = false
     }
   } catch {
-    fail('API', `${apiBase} unreachable — check your network or PULLENV_API_BASE`)
+    fail('API', `${apiBase} unreachable — check your network or DOTENVY_API_BASE`)
     allGood = false
   }
 
@@ -66,7 +66,7 @@ export async function doctorCommand(): Promise<void> {
       `${project.configPath} → ${project.config.repoFullName} / ${project.config.defaultEnv}`,
     )
   } else {
-    notice('Project config', `No .pullenv.json found — run ${fmt.bold('pullenv init')} to create one`)
+    notice('Project config', `No .dotenvy.json found — run ${fmt.bold('dotenvy init')} to create one`)
   }
 
   // ── 6. Summary ─────────────────────────────────────────────────────────────
@@ -74,7 +74,7 @@ export async function doctorCommand(): Promise<void> {
   if (allGood) {
     success('All checks passed.')
   } else {
-    error('Some checks failed. Fix the issues above and re-run pullenv doctor.')
+    error('Some checks failed. Fix the issues above and re-run dotenvy doctor.')
     process.exit(1)
   }
 }

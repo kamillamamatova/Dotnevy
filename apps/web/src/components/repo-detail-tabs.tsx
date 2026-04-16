@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import type { GitHubPermission } from '@pullenv/db'
-import type { RepoRole } from '@pullenv/shared'
+import type { GitHubPermission } from '@dotenvy/db'
+import type { RepoRole } from '@dotenvy/shared'
 import { AuditLogList, type AuditEntry } from '@/components/audit-log-list'
 
 type Tab = 'environments' | 'access' | 'activity'

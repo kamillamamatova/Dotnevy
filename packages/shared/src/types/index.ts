@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-// Mirrors the Prisma RepoRole enum so shared code doesn't import from @pullenv/db
+// Mirrors the Prisma RepoRole enum so shared code doesn't import from @dotenvy/db
 export const RepoRoleSchema = z.enum(['READ', 'WRITE', 'ADMIN'])
 export type RepoRole = z.infer<typeof RepoRoleSchema>
 
@@ -11,7 +11,7 @@ export const ROLE_RANK: Record<RepoRole, number> = {
   ADMIN: 2,
 }
 
-// CLI token payload stored in ~/.pullenv/credentials.json
+// CLI token payload stored in ~/.dotenvy/credentials.json
 export interface CliCredentials {
   accessToken: string
   refreshToken: string

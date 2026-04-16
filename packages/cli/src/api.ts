@@ -1,5 +1,5 @@
 /**
- * Typed API client for the Pullenv web app.
+ * Typed API client for the Dotenvy web app.
  *
  * All network calls go through `apiGet` / `apiPost` so auth headers and error
  * handling are applied consistently. The base URL is always read from the
@@ -7,7 +7,7 @@
  */
 
 import { getValidToken } from './auth.js'
-import type { PullEnvResponse } from '@pullenv/shared'
+import type { PullEnvResponse } from '@dotenvy/shared'
 
 // ─── Generic request helpers ──────────────────────────────────────────────────
 

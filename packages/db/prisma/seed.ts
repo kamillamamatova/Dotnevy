@@ -1,5 +1,5 @@
 /**
- * Seed strategy for Pullenv
+ * Seed strategy for Dotenvy
  *
  * Seed philosophy:
  *   - Seed only what is necessary to make the app functional and locally testable.
@@ -109,7 +109,7 @@ async function main() {
   }
 
   console.log(`Seeded: user=${user.githubLogin}, repo=${repo.owner}/${repo.name}`)
-  console.log('Set actual secret values via the dashboard or: pullenv pull')
+  console.log('Set actual secret values via the dashboard or: dotenvy pull')
 }
 
 main()

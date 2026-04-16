@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@pullenv/db'
+import { prisma } from '@dotenvy/db'
 import { notFound, redirect } from 'next/navigation'
 import { resolveUserRole } from '@/lib/membership'
 import Link from 'next/link'

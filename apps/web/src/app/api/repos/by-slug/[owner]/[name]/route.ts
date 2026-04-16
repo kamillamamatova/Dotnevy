@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@pullenv/db'
+import { prisma } from '@dotenvy/db'
 import { permissionToRole } from '@/lib/github'
 import { resolveRequestAuth } from '@/lib/session'
 

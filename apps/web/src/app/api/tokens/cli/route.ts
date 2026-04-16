@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { SignJWT } from 'jose'
-import { prisma } from '@pullenv/db'
+import { prisma } from '@dotenvy/db'
 import { permissionToRole } from '@/lib/github'
 
 // ─── Constants ────────────────────────────────────────────────────────────────

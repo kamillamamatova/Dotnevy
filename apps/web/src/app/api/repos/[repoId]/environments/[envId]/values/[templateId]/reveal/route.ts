@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@pullenv/db'
+import { prisma } from '@dotenvy/db'
 import { evaluateAccess } from '@/lib/policy'
 import { decrypt } from '@/lib/encryption'
 import { logAudit } from '@/lib/audit'

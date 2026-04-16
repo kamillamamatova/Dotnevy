@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@pullenv/db'
+import { prisma } from '@dotenvy/db'
 import { evaluateAccess } from '@/lib/policy'
 import { decrypt } from '@/lib/encryption'
 import { logAudit } from '@/lib/audit'
 import { resolveRequestAuth } from '@/lib/session'
-import type { PullEnvResponse, PullVariable, SkippedVariable } from '@pullenv/shared'
+import type { PullEnvResponse, PullVariable, SkippedVariable } from '@dotenvy/shared'
 
 // ─── Pull endpoint ────────────────────────────────────────────────────────────
 //

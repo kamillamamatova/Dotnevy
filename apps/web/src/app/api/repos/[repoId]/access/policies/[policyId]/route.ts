@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma, AuditAction } from '@pullenv/db'
-import { canAdmin } from '@pullenv/shared'
+import { prisma, AuditAction } from '@dotenvy/db'
+import { canAdmin } from '@dotenvy/shared'
 import { resolveUserRole } from '@/lib/membership'
 
 // DELETE /api/repos/:repoId/access/policies/:policyId

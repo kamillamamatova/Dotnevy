@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@pullenv/db'
-import { UpdateTemplateSchema, canWrite } from '@pullenv/shared'
+import { prisma } from '@dotenvy/db'
+import { UpdateTemplateSchema, canWrite } from '@dotenvy/shared'
 import { resolveUserRole } from '@/lib/membership'
 import { logAudit } from '@/lib/audit'
 

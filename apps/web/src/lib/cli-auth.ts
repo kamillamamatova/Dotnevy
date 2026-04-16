@@ -1,5 +1,5 @@
 import { jwtVerify } from 'jose'
-import type { CliTokenClaims } from '@pullenv/shared'
+import type { CliTokenClaims } from '@dotenvy/shared'
 
 // Must match the secret used in POST /api/tokens/cli
 const CLI_JWT_SECRET = new TextEncoder().encode(

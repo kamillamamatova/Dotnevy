@@ -9,7 +9,7 @@
  *   do NOT request repo-scoped OAuth scopes. Scopes: read:user, user:email.
  *
  * GITHUB APP  (this file)
- *   A GitHub App installation grants Pullenv access to specific repos on
+ *   A GitHub App installation grants Dotenvy access to specific repos on
  *   behalf of an org or user account. We authenticate as the App using a
  *   short-lived RS256 JWT signed with the App private key, then exchange it
  *   for a per-installation access token scoped to those repos.
@@ -24,7 +24,7 @@
  * ─── Permission model ────────────────────────────────────────────────────────
  *
  *   GitHub exposes 6 levels: NONE, READ, TRIAGE, WRITE, MAINTAIN, ADMIN.
- *   Internally Pullenv uses 3 tiers: READ, WRITE, ADMIN (null = no access).
+ *   Internally Dotenvy uses 3 tiers: READ, WRITE, ADMIN (null = no access).
  *
  *   Mapping:
  *     NONE                 → null  (deny)
@@ -38,8 +38,8 @@
  */
 
 import { SignJWT, importPKCS8 } from 'jose'
-import { GitHubPermission } from '@pullenv/db'
-import type { RepoRole } from '@pullenv/shared'
+import { GitHubPermission } from '@dotenvy/db'
+import type { RepoRole } from '@dotenvy/shared'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

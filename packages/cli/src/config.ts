@@ -1,7 +1,7 @@
 /**
- * Project-level config — stored in .pullenv.json at the repo root.
+ * Project-level config — stored in .dotenvy.json at the repo root.
  *
- * This file pins which Pullenv repo + environment the current project uses,
+ * This file pins which Dotenvy repo + environment the current project uses,
  * so the user doesn't have to pass --repo and --env on every pull.
  *
  * The file should be committed to source control (it contains no secrets).
@@ -10,20 +10,20 @@
 import fs from 'fs'
 import path from 'path'
 
-const CONFIG_FILE = '.pullenv.json'
+const CONFIG_FILE = '.dotenvy.json'
 
 export interface ProjectConfig {
-  /** Pullenv repo ID (cuid), resolved at `pullenv init` time. */
+  /** Dotenvy repo ID (cuid), resolved at `dotenvy init` time. */
   repoId: string
   /** Human-readable "owner/name" for display. */
   repoFullName: string
   /** Default environment name, e.g. "development". */
   defaultEnv: string
-  /** Default output file for `pullenv pull`, e.g. ".env.local". */
+  /** Default output file for `dotenvy pull`, e.g. ".env.local". */
   outputFile: string
 }
 
-/** Walks up the directory tree looking for .pullenv.json, returns null if none. */
+/** Walks up the directory tree looking for .dotenvy.json, returns null if none. */
 export function findProjectConfig(): { config: ProjectConfig; configPath: string } | null {
   let dir = process.cwd()
 
@@ -46,7 +46,7 @@ export function findProjectConfig(): { config: ProjectConfig; configPath: string
   return null
 }
 
-/** Reads .pullenv.json in the current working directory (not walking up). */
+/** Reads .dotenvy.json in the current working directory (not walking up). */
 export function readProjectConfig(): ProjectConfig | null {
   const configPath = path.join(process.cwd(), CONFIG_FILE)
   try {
@@ -57,7 +57,7 @@ export function readProjectConfig(): ProjectConfig | null {
   }
 }
 
-/** Writes .pullenv.json in the current working directory. */
+/** Writes .dotenvy.json in the current working directory. */
 export function writeProjectConfig(config: ProjectConfig): void {
   const configPath = path.join(process.cwd(), CONFIG_FILE)
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n')

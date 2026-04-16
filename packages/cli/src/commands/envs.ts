@@ -8,7 +8,7 @@ interface EnvsOptions {
 export async function envsCommand(options: EnvsOptions): Promise<void> {
   const repo = await getRepoBySlug(options.repo)
   if (!repo) {
-    error(`Repo "${options.repo}" not found in Pullenv.`)
+    error(`Repo "${options.repo}" not found in Dotenvy.`)
     process.exit(1)
   }
 
@@ -39,7 +39,7 @@ export async function envsCommand(options: EnvsOptions): Promise<void> {
   blank()
   console.log(
     fmt.dim(
-      `Run ${fmt.bold(`pullenv pull --repo ${options.repo} --env <name>`)} to pull variables.`,
+      `Run ${fmt.bold(`dotenvy pull --repo ${options.repo} --env <name>`)} to pull variables.`,
     ),
   )
 }

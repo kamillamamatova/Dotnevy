@@ -58,7 +58,7 @@ export default function ConnectRepoPage() {
         </Link>
         <h1 className="mt-4 text-2xl font-semibold">Connect a repo</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Connect a GitHub repository to start managing its environment variables with Pullenv.
+          Connect a GitHub repository to start managing its environment variables with Dotenvy.
         </p>
       </div>
 
@@ -132,7 +132,7 @@ export default function ConnectRepoPage() {
       <div className="mt-8 rounded-lg border border-blue-100 bg-blue-50 px-4 py-4 text-sm text-blue-800">
         <p className="font-medium">GitHub App installation coming soon</p>
         <p className="mt-1 text-blue-700">
-          Installing the Pullenv GitHub App on your org will automatically connect repos and sync
+          Installing the Dotenvy GitHub App on your org will automatically connect repos and sync
           collaborator permissions. For now, connect repos manually above.
         </p>
       </div>

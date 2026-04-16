@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { RepoRole } from '@pullenv/shared'
+import type { RepoRole } from '@dotenvy/shared'
 
 // ─── Data types (passed from server) ──────────────────────────────────────────
 

@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next'
 
 const config: NextConfig = {
-  transpilePackages: ['@pullenv/shared', '@pullenv/db'],
+  transpilePackages: ['@dotenvy/shared', '@dotenvy/db'],
 }
 
 export default config

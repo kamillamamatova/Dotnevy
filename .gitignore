@@ -25,4 +25,4 @@ build/
 prisma/migrations/
 
 # CLI credentials
-.pullenv/
+.dotenvy/

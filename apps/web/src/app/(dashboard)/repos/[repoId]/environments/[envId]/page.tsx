@@ -1,13 +1,14 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@pullenv/db'
+import { prisma } from '@dotenvy/db'
 import { notFound, redirect } from 'next/navigation'
 import { resolveUserRole } from '@/lib/membership'
 import { permissionToRole } from '@/lib/github'
-import { canWrite, canPull } from '@pullenv/shared'
+import { canWrite, canPull } from '@dotenvy/shared'
 import Link from 'next/link'
 import { VariablePanel } from '@/components/variable-panel'
 import { DeleteEnvButton } from '@/components/delete-env-button'
+import { CliCommand } from '@/components/cli-command'
 
 type Props = { params: { repoId: string; envId: string } }
 
@@ -115,6 +116,28 @@ export default async function EnvironmentPage({ params }: Props) {
           />
         )}
       </div>
+
+      {/* Pull command */}
+      {userCanReveal && (
+        <div className="mb-8 rounded-lg border border-gray-200 bg-gray-50 px-5 py-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+            Pull this environment
+          </p>
+          <CliCommand
+            command={`dotenvy pull --repo ${repo.owner}/${repo.name} --env ${env.name}`}
+          />
+          <p className="mt-2 text-xs text-gray-400">
+            First time?{' '}
+            <Link
+              href={`/repos/${params.repoId}/setup`}
+              className="underline underline-offset-2 hover:text-gray-600"
+            >
+              See the full setup guide
+            </Link>
+            .
+          </p>
+        </div>
+      )}
 
       {/* Variables */}
       <section>

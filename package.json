@@ -1,5 +1,5 @@
 {
-  "name": "pullenv",
+  "name": "dotenvy",
   "private": true,
   "workspaces": [
     "apps/*",

@@ -1,8 +1,8 @@
-# Pullenv
+# Dotenvy
 
-Pullenv is a GitHub-native developer onboarding tool that helps teams securely manage shared environment variables for local development.
+Dotenvy is a GitHub-native developer onboarding tool that helps teams securely manage shared environment variables for local development.
 
-**Core workflow:** a developer joins a repo, logs in with GitHub, gets access based on their repo role, and runs `pullenv pull` to get the correct env vars into `.env.local` — without teammates manually sending secrets.
+**Core workflow:** a developer joins a repo, logs in with GitHub, gets access based on their repo role, and runs `dotenvy pull` to get the correct env vars into `.env.local` — without teammates manually sending secrets.
 
 ---
 
@@ -17,7 +17,7 @@ Pullenv is a GitHub-native developer onboarding tool that helps teams securely m
 ├─────────────────────────────────────────────────────────┤
 │  packages/db       Prisma schema + PrismaClient         │
 │  packages/shared   Zod schemas, types, RBAC helpers     │
-│  packages/cli      `pullenv` CLI published to npm       │
+│  packages/cli      `dotenvy` CLI published to npm       │
 └─────────────────────────────────────────────────────────┘
               │
          PostgreSQL
@@ -26,7 +26,7 @@ Pullenv is a GitHub-native developer onboarding tool that helps teams securely m
 **Security highlights:**
 - Env var values encrypted at rest with AES-256-GCM, per-repo data encryption keys
 - Per-repo DEKs are themselves encrypted with a server master key
-- CLI uses short-lived JWTs (15 min) with long-lived refresh tokens stored at `~/.pullenv/credentials.json` (mode 600)
+- CLI uses short-lived JWTs (15 min) with long-lived refresh tokens stored at `~/.dotenvy/credentials.json` (mode 600)
 - GitHub role checked on first access, cached with 1-hour TTL, invalidated via webhook on membership changes
 
 ---
@@ -38,7 +38,7 @@ Pullenv is a GitHub-native developer onboarding tool that helps teams securely m
 | `apps/web` | Next.js dashboard and API server |
 | `packages/db` | Prisma schema, migrations, and PrismaClient singleton |
 | `packages/shared` | Zod validation schemas, TypeScript types, RBAC permission helpers |
-| `packages/cli` | `pullenv` CLI: `login`, `pull`, `whoami`, `logout` |
+| `packages/cli` | `dotenvy` CLI: `login`, `pull`, `whoami`, `logout` |
 
 ---
 
@@ -97,13 +97,13 @@ npm run dev
 ## CLI Usage
 
 ```bash
-npm install -g pullenv
+npm install -g dotenvy
 
-pullenv login           # authenticate via browser
-pullenv pull            # pull development env vars into .env.local
-pullenv pull --env staging --output .env.staging
-pullenv whoami          # show current user and token info
-pullenv logout
+dotenvy login           # authenticate via browser
+dotenvy pull            # pull development env vars into .env.local
+dotenvy pull --env staging --output .env.staging
+dotenvy whoami          # show current user and token info
+dotenvy logout
 ```
 
 ---

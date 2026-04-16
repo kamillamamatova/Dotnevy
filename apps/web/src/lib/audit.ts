@@ -1,4 +1,4 @@
-import { prisma, AuditAction } from '@pullenv/db'
+import { prisma, AuditAction } from '@dotenvy/db'
 
 // ─── Typed audit service ──────────────────────────────────────────────────────
 //

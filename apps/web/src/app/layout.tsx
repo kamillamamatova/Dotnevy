@@ -3,7 +3,7 @@ import './globals.css'
 import { Providers } from '@/components/providers'
 
 export const metadata: Metadata = {
-  title: 'Pullenv',
+  title: 'Dotenvy',
   description: 'Secure shared environment variables for GitHub teams',
 }
 

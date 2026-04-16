@@ -1,5 +1,5 @@
-import { prisma, GitHubPermission } from '@pullenv/db'
-import type { RepoRole } from '@pullenv/shared'
+import { prisma, GitHubPermission } from '@dotenvy/db'
+import type { RepoRole } from '@dotenvy/shared'
 import { permissionToRole, getInstallationToken, getCollaboratorPermission } from '@/lib/github'
 
 const MEMBERSHIP_TTL_MS = 60 * 60 * 1000 // 1 hour

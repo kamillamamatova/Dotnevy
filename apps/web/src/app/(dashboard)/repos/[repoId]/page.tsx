@@ -1,10 +1,10 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@pullenv/db'
+import { prisma } from '@dotenvy/db'
 import { notFound, redirect } from 'next/navigation'
 import { resolveUserRole } from '@/lib/membership'
 import { permissionToRole } from '@/lib/github'
-import { canWrite } from '@pullenv/shared'
+import { canWrite, canPull } from '@dotenvy/shared'
 import {
   RepoDetailTabs,
   type Member,
@@ -40,6 +40,9 @@ export default async function RepoDetailPage({ params }: Props) {
     description: e.description,
     templateCount: e._count.variableTemplates,
   }))
+
+  // Whether the user can pull at least one environment
+  const hasPullableEnv = environments.some((e) => canPull(role, e.minRole))
 
   // Members for the Access tab
   const rawMembers = await prisma.repoMembership.findMany({
@@ -120,6 +123,24 @@ export default async function RepoDetailPage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Setup callout */}
+      {hasPullableEnv && (
+        <div className="mb-6 flex items-center justify-between rounded-lg border border-blue-100 bg-blue-50 px-5 py-4">
+          <div>
+            <p className="text-sm font-semibold text-blue-900">New to this repo?</p>
+            <p className="mt-0.5 text-xs text-blue-700">
+              Get the CLI set up and pull your local environment variables in minutes.
+            </p>
+          </div>
+          <Link
+            href={`/repos/${params.repoId}/setup`}
+            className="shrink-0 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+          >
+            Get set up →
+          </Link>
+        </div>
+      )}
 
       <RepoDetailTabs
         repoId={params.repoId}
