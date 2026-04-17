@@ -77,6 +77,11 @@ export default async function EnvironmentPage({ params }: Props) {
     }
   })
 
+  // Required variables with no value set and no non-secret default
+  const missingRequired = variables.filter(
+    (v) => v.isRequired && !v.hasSecret && v.defaultValue === null,
+  )
+
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
       {/* Breadcrumb */}
@@ -135,6 +140,30 @@ export default async function EnvironmentPage({ params }: Props) {
               See the full setup guide
             </Link>
             .
+          </p>
+        </div>
+      )}
+
+      {/* Missing required variables warning */}
+      {missingRequired.length > 0 && (
+        <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3">
+          <p className="text-sm font-medium text-amber-800">
+            {missingRequired.length} required variable{missingRequired.length !== 1 ? 's' : ''}{' '}
+            {missingRequired.length !== 1 ? 'have' : 'has'} no value set
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {missingRequired.map((v) => (
+              <code
+                key={v.templateId}
+                className="rounded bg-amber-100 px-1.5 py-0.5 font-mono text-xs text-amber-900"
+              >
+                {v.key}
+              </code>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-amber-700">
+            These variables are marked required but have no secret value. Pulling this environment
+            will succeed but these keys will be absent from the output.
           </p>
         </div>
       )}
