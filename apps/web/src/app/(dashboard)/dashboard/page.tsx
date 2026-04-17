@@ -68,23 +68,23 @@ export default async function DashboardPage() {
         <EmptyState />
       ) : (
         <div className="space-y-3">
-          {memberships.map(({ repo, permission }) => {
-            const role = permissionToRole(permission)
+          {memberships.map((m) => {
+            const role = permissionToRole(m.permission)
             return (
               <RepoCard
-                key={repo.id}
-                repoId={repo.id}
-                owner={repo.owner}
-                name={repo.name}
-                isPrivate={repo.private}
+                key={m.repo.id}
+                repoId={m.repo.id}
+                owner={m.repo.owner}
+                name={m.repo.name}
+                isPrivate={m.repo.private}
                 role={role}
-                environments={repo.environments.map((e) => ({
+                environments={m.repo.environments.map((e) => ({
                   id: e.id,
                   name: e.name,
                   type: e.type,
                   varCount: e._count.variableTemplates,
                 }))}
-                memberCount={repo.memberships.length}
+                memberCount={m.repo.memberships.length}
               />
             )
           })}
