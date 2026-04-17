@@ -34,9 +34,10 @@ enum AuditAction {
   ROTATE_VAR      // the repo's encryption key was rotated (future)
 
   // ── Variable template events ──────────────────────────────────────────────
-  CREATE_TEMPLATE // a new variable key definition was created
-  UPDATE_TEMPLATE // key metadata (description/required/default) was changed
-  DELETE_TEMPLATE // a variable key definition and all its versions were removed
+  CREATE_TEMPLATE   // a new variable key definition was created
+  UPDATE_TEMPLATE   // key metadata (description/required/default) was changed
+  DELETE_TEMPLATE   // a variable key definition and all its versions were removed
+  IMPORT_TEMPLATES  // bulk-imported variable templates from .env.example
 
   // ── Environment events ────────────────────────────────────────────────────
   CREATE_ENVIRONMENT
@@ -274,6 +275,8 @@ model AccessPolicy {
   userId       String
   action       PolicyAction
   effect       PolicyEffect
+  expiresAt    DateTime?        // null = permanent; set for time-limited grants
+  note         String?          // optional context for the grant (max 255 chars)
   createdAt    DateTime         @default(now())
 
   repo        Repo            @relation(fields: [repoId], references: [id], onDelete: Cascade)
