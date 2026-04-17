@@ -1,10 +1,16 @@
 import { jwtVerify } from 'jose'
 import type { CliTokenClaims } from '@dotenvy/shared'
 
-// Must match the secret used in POST /api/tokens/cli
-const CLI_JWT_SECRET = new TextEncoder().encode(
-  process.env.CLI_JWT_SECRET ?? 'dev-secret-change-me',
-)
+// Fail loudly at module load so misconfigured deployments surface immediately,
+// not on the first CLI auth attempt by a real user.
+const _rawCliSecret = process.env.CLI_JWT_SECRET
+if (!_rawCliSecret) {
+  throw new Error(
+    'CLI_JWT_SECRET environment variable is not set. ' +
+      'Generate a secret with: openssl rand -base64 32',
+  )
+}
+const CLI_JWT_SECRET = new TextEncoder().encode(_rawCliSecret)
 
 /**
  * Verifies a CLI JWT Bearer token and returns the decoded claims.

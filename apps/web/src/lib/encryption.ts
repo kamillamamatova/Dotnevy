@@ -45,34 +45,31 @@ import { prisma } from '@dotenvy/db'
 const ALGORITHM = 'aes-256-gcm'
 const KEY_BYTES = 32
 
-/**
- * Returns the master encryption key from the environment.
- * Throws on startup if the key is missing or too short.
- */
-function getMasterKey(): Buffer {
+// Validate and cache the master key at module load so misconfigured deployments
+// fail immediately on first request, not partway through an encrypt/decrypt op.
+const MASTER_KEY: Buffer = (() => {
   const raw = process.env.MASTER_ENCRYPTION_KEY
-  if (!raw) throw new Error('MASTER_ENCRYPTION_KEY is not set')
-
+  if (!raw) {
+    throw new Error(
+      'MASTER_ENCRYPTION_KEY is not set. ' +
+        'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"',
+    )
+  }
   const key = Buffer.from(raw, 'base64')
   if (key.length < KEY_BYTES) {
     throw new Error('MASTER_ENCRYPTION_KEY must be at least 32 bytes (base64-encoded)')
   }
-
   return key.subarray(0, KEY_BYTES)
-}
+})()
 
-/** Encrypt plaintext with the given key. Returns ciphertext + iv as base64 strings. */
-function aesEncrypt(
-  key: Buffer,
-  plaintext: string,
-): { ciphertext: string; iv: string; authTag: string } {
+/** Encrypt plaintext with the given key. Returns ciphertext (with 16-byte GCM auth tag appended) + iv as base64 strings. */
+function aesEncrypt(key: Buffer, plaintext: string): { ciphertext: string; iv: string } {
   const iv = randomBytes(12)
   const cipher = createCipheriv(ALGORITHM, key, iv)
   const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()])
   return {
     ciphertext: Buffer.concat([encrypted, cipher.getAuthTag()]).toString('base64'),
     iv: iv.toString('base64'),
-    authTag: cipher.getAuthTag().toString('base64'),
   }
 }
 
@@ -91,14 +88,12 @@ function aesDecrypt(key: Buffer, ciphertext: string, iv: string): string {
 
 /** Get or create a per-repo data encryption key, wrapped with the master key. */
 async function getRepoDek(repoId: string): Promise<Buffer> {
-  const masterKey = getMasterKey()
-
   let record = await prisma.repoEncryptionKey.findUnique({ where: { repoId } })
 
   if (!record) {
     // Generate a new DEK and wrap it
     const dek = randomBytes(KEY_BYTES)
-    const { ciphertext, iv } = aesEncrypt(masterKey, dek.toString('base64'))
+    const { ciphertext, iv } = aesEncrypt(MASTER_KEY, dek.toString('base64'))
 
     record = await prisma.repoEncryptionKey.create({
       data: { repoId, encryptedKey: ciphertext, iv },
@@ -106,7 +101,7 @@ async function getRepoDek(repoId: string): Promise<Buffer> {
   }
 
   // Unwrap the DEK
-  const dekBase64 = aesDecrypt(masterKey, record.encryptedKey, record.iv)
+  const dekBase64 = aesDecrypt(MASTER_KEY, record.encryptedKey, record.iv)
   return Buffer.from(dekBase64, 'base64')
 }
 

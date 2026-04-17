@@ -3,20 +3,28 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { SignJWT } from 'jose'
 import { prisma } from '@dotenvy/db'
+import { Prisma } from '@prisma/client'
 import { permissionToRole } from '@/lib/github'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const CLI_JWT_SECRET = new TextEncoder().encode(
-  process.env.CLI_JWT_SECRET ?? 'dev-secret-change-me',
-)
+// Fail loudly at module load so misconfigured deployments surface immediately.
+const _rawCliSecret = process.env.CLI_JWT_SECRET
+if (!_rawCliSecret) {
+  throw new Error(
+    'CLI_JWT_SECRET environment variable is not set. ' +
+      'Generate a secret with: openssl rand -base64 32',
+  )
+}
+const CLI_JWT_SECRET = new TextEncoder().encode(_rawCliSecret)
+
 const ACCESS_TOKEN_TTL_SECONDS = 15 * 60   // 15 minutes
 const AUTH_REQUEST_TTL_SECONDS = 10 * 60   // 10 minutes — how long the browser has to complete login
 const REFRESH_TOKEN_TTL_DAYS = 30          // 30 days rolling window
 
-// How many outstanding pending auth requests one IP may have at a time.
-// Prevents state-flooding if someone discovers the endpoint.
-const MAX_PENDING_PER_IP = 5
+// Global safety valve on unclaimed pending auth requests.
+// IP-based limiting would require a Redis counter; this prevents table flooding.
+const MAX_GLOBAL_PENDING = 50
 
 // ─── GET /api/tokens/cli?state=<state> ───────────────────────────────────────
 //
@@ -112,16 +120,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid state' }, { status: 400 })
   }
 
-  // Rate-limit: at most MAX_PENDING_PER_IP unclaimed states per user to prevent abuse
-  // (IP-based rate limiting would require a Redis counter; user-based is sufficient for MVP)
+  // Global safety valve — rejects new requests when the table is flooded with
+  // unclaimed states (e.g. a bot hammering PUT with random UUIDs).
   const unclaimed = await prisma.cliAuthRequest.count({
     where: {
       claimedByUserId: null,
       expiresAt: { gt: new Date() },
     },
   })
-  if (unclaimed >= MAX_PENDING_PER_IP * 10) {
-    // Global safety valve — not per-user since the browser user is legitimate
+  if (unclaimed >= MAX_GLOBAL_PENDING) {
     return NextResponse.json({ error: 'Too many pending requests' }, { status: 429 })
   }
 
@@ -158,18 +165,21 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid state' }, { status: 400 })
   }
 
-  // Prevent duplicate state registration
-  const existing = await prisma.cliAuthRequest.findUnique({ where: { state } })
-  if (existing) {
-    return NextResponse.json({ error: 'State already registered' }, { status: 409 })
+  // Rely on the DB unique constraint rather than a check-then-insert to avoid
+  // the race window where two concurrent PUT requests register the same state.
+  try {
+    await prisma.cliAuthRequest.create({
+      data: {
+        state,
+        expiresAt: new Date(Date.now() + AUTH_REQUEST_TTL_SECONDS * 1000),
+      },
+    })
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      return NextResponse.json({ error: 'State already registered' }, { status: 409 })
+    }
+    throw e
   }
-
-  await prisma.cliAuthRequest.create({
-    data: {
-      state,
-      expiresAt: new Date(Date.now() + AUTH_REQUEST_TTL_SECONDS * 1000),
-    },
-  })
 
   return NextResponse.json({ ok: true })
 }
