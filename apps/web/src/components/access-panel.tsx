@@ -32,6 +32,8 @@ export interface PolicyOverride {
   environmentId: string | null
   action: 'PULL' | 'WRITE'
   effect: 'ALLOW' | 'DENY'
+  expiresAt: string | null   // ISO 8601; null = permanent
+  note: string | null
   createdAt: string
 }
 
@@ -429,17 +431,29 @@ function OverridesTab({
                   ) : (
                     <span className="ml-1.5 text-xs text-gray-400">repo-wide</span>
                   )}
+                  {p.note && (
+                    <span className="ml-1.5 text-xs text-gray-400 italic" title={p.note}>
+                      — {p.note.length > 40 ? p.note.slice(0, 40) + '…' : p.note}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              {isAdmin && (
-                <button
-                  onClick={() => deletePolicy(p.id)}
-                  className="text-xs text-gray-400 hover:text-red-600"
-                >
-                  Remove
-                </button>
-              )}
+              <div className="flex items-center gap-3">
+                {p.expiresAt && (
+                  <span className={`text-xs ${new Date(p.expiresAt) < new Date() ? 'text-red-400 line-through' : 'text-amber-600'}`}>
+                    expires {new Date(p.expiresAt).toLocaleDateString()}
+                  </span>
+                )}
+                {isAdmin && (
+                  <button
+                    onClick={() => deletePolicy(p.id)}
+                    className="text-xs text-gray-400 hover:text-red-600"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
             </li>
           ))}
         </ul>
@@ -467,13 +481,23 @@ function AddOverrideForm({
   const [environmentId, setEnvironmentId] = useState<string>('') // '' = repo-wide
   const [action, setAction] = useState<'PULL' | 'WRITE'>('PULL')
   const [effect, setEffect] = useState<'ALLOW' | 'DENY'>('DENY')
+  const [expiresIn, setExpiresIn] = useState<string>('never') // 'never' | '1' | '7' | '30' | '90'
+  const [note, setNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  function buildExpiresAt(): string | undefined {
+    if (expiresIn === 'never') return undefined
+    const d = new Date()
+    d.setDate(d.getDate() + parseInt(expiresIn, 10))
+    return d.toISOString()
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setSubmitting(true)
     setError(null)
+    const expiresAt = buildExpiresAt()
     try {
       const res = await fetch(`/api/repos/${repoId}/access/policies`, {
         method: 'POST',
@@ -483,6 +507,8 @@ function AddOverrideForm({
           action,
           effect,
           ...(environmentId ? { environmentId } : {}),
+          ...(expiresAt ? { expiresAt } : {}),
+          ...(note.trim() ? { note: note.trim() } : {}),
         }),
       })
       const data = await res.json()
@@ -557,6 +583,35 @@ function AddOverrideForm({
             <option value="DENY">DENY (block beyond role)</option>
             <option value="ALLOW">ALLOW (grant beyond role)</option>
           </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-600">Expires</label>
+          <select
+            value={expiresIn}
+            onChange={(e) => setExpiresIn(e.target.value)}
+            className="mt-1 w-full rounded border border-gray-200 px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300"
+          >
+            <option value="never">Never (permanent)</option>
+            <option value="1">1 day</option>
+            <option value="7">7 days</option>
+            <option value="30">30 days</option>
+            <option value="90">90 days</option>
+          </select>
+        </div>
+
+        <div className="sm:col-span-3">
+          <label className="block text-xs font-medium text-gray-600">
+            Note <span className="font-normal text-gray-400">(optional)</span>
+          </label>
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={255}
+            placeholder="e.g. Temporary access for contractor sprint"
+            className="mt-1 w-full rounded border border-gray-200 px-2 py-1.5 text-sm text-gray-700 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300"
+          />
         </div>
       </div>
 

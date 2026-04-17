@@ -159,9 +159,14 @@ async function checkPolicies(
   const policies = await prisma.accessPolicy.findMany({ where })
   if (policies.length === 0) return null
 
+  // Discard expired time-limited grants
+  const now = new Date()
+  const active = policies.filter((p) => !p.expiresAt || p.expiresAt > now)
+  if (active.length === 0) return null
+
   // Env-specific policies first (more specific wins), then repo-wide
-  const envSpecific = policies.filter((p) => p.environmentId === envId)
-  const repoWide = policies.filter((p) => p.environmentId === null)
+  const envSpecific = active.filter((p) => p.environmentId === envId)
+  const repoWide = active.filter((p) => p.environmentId === null)
 
   for (const group of [envSpecific, repoWide]) {
     // Within each group: DENY beats ALLOW

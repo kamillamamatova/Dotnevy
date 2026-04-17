@@ -33,7 +33,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     )
   }
 
-  const { userId, environmentId, action, effect } = parsed.data
+  const { userId, environmentId, action, effect, expiresAt, note } = parsed.data
 
   // Validate: target user must be a member
   const membership = await prisma.repoMembership.findUnique({
@@ -78,6 +78,8 @@ export async function POST(req: NextRequest, { params }: Params) {
       environmentId: environmentId ?? null,
       action,
       effect,
+      expiresAt: expiresAt ? new Date(expiresAt) : null,
+      note: note ?? null,
     },
     include: { user: { select: { githubLogin: true } } },
   })
@@ -102,9 +104,12 @@ export async function POST(req: NextRequest, { params }: Params) {
       id: policy.id,
       userId: policy.userId,
       githubLogin: policy.user.githubLogin,
+      userImage: null,
       environmentId: policy.environmentId,
       action: policy.action,
       effect: policy.effect,
+      expiresAt: policy.expiresAt?.toISOString() ?? null,
+      note: policy.note,
       createdAt: policy.createdAt.toISOString(),
     },
     { status: 201 },

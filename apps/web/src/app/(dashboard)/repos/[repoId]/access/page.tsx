@@ -69,6 +69,8 @@ export default async function AccessPage({ params }: Props) {
     environmentId: p.environmentId,
     action: p.action as 'PULL' | 'WRITE',
     effect: p.effect as 'ALLOW' | 'DENY',
+    expiresAt: p.expiresAt?.toISOString() ?? null,
+    note: p.note,
     createdAt: p.createdAt.toISOString(),
   }))
 

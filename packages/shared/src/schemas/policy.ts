@@ -16,6 +16,10 @@ export const CreatePolicySchema = z.object({
   environmentId: z.string().cuid().optional(),
   action: z.enum(['PULL', 'WRITE']),
   effect: z.enum(['ALLOW', 'DENY']),
+  /** ISO 8601 string; omit for a permanent grant. */
+  expiresAt: z.string().datetime().optional(),
+  /** Optional human-readable reason for the grant (max 255 chars). */
+  note: z.string().max(255).optional(),
 })
 
 export type CreatePolicyInput = z.infer<typeof CreatePolicySchema>
