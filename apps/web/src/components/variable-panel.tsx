@@ -2,6 +2,21 @@
 
 import { useState, useEffect, useRef } from 'react'
 
+// ─── History types ─────────────────────────────────────────────────────────────
+
+interface HistoryEntry {
+  version: number
+  createdAt: string
+  createdBy: string | null
+}
+
+interface HistoryData {
+  templateId: string
+  key: string
+  totalVersions: number
+  versions: HistoryEntry[]
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface VariableRow {
@@ -36,6 +51,10 @@ export function VariablePanel({ repoId, envId, initialVariables, canManage, canR
   const [settingValueFor, setSettingValueFor] = useState<string | null>(null)
   // Which template is in "edit template" mode
   const [editingTemplateFor, setEditingTemplateFor] = useState<string | null>(null)
+  // Which template has its version history expanded
+  const [historyOpenFor, setHistoryOpenFor] = useState<string | null>(null)
+  // Whether the bulk-import form is open
+  const [showImportForm, setShowImportForm] = useState(false)
   // Revealed values: templateId → { value, expiresAt }
   const [revealed, setRevealed] = useState<Record<string, { value: string; expiresAt: number }>>({})
 
@@ -103,6 +122,11 @@ export function VariablePanel({ repoId, envId, initialVariables, canManage, canR
     setShowAddForm(false)
   }
 
+  function onTemplatesBulkAdded(rows: VariableRow[]) {
+    setVariables((prev) => [...prev, ...rows].sort((a, b) => a.key.localeCompare(b.key)))
+    setShowImportForm(false)
+  }
+
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -132,19 +156,28 @@ export function VariablePanel({ repoId, envId, initialVariables, canManage, canR
                       onCancel={() => setSettingValueFor(null)}
                     />
                   ) : (
-                    <ViewRow
-                      repoId={repoId}
-                      envId={envId}
-                      row={row}
-                      revealed={revealed[row.id] ?? null}
-                      canManage={canManage}
-                      canReveal={canReveal}
-                      onSetValue={() => setSettingValueFor(row.id)}
-                      onEditTemplate={() => setEditingTemplateFor(row.id)}
-                      onDelete={() => onTemplateDeleted(row.id)}
-                      onReveal={(v) => onReveal(row.id, v)}
-                      onHideRevealed={() => hideRevealed(row.id)}
-                    />
+                    <>
+                      <ViewRow
+                        repoId={repoId}
+                        envId={envId}
+                        row={row}
+                        revealed={revealed[row.id] ?? null}
+                        canManage={canManage}
+                        canReveal={canReveal}
+                        isHistoryOpen={historyOpenFor === row.id}
+                        onToggleHistory={() =>
+                          setHistoryOpenFor((prev) => (prev === row.id ? null : row.id))
+                        }
+                        onSetValue={() => setSettingValueFor(row.id)}
+                        onEditTemplate={() => setEditingTemplateFor(row.id)}
+                        onDelete={() => onTemplateDeleted(row.id)}
+                        onReveal={(v) => onReveal(row.id, v)}
+                        onHideRevealed={() => hideRevealed(row.id)}
+                      />
+                      {historyOpenFor === row.id && (
+                        <HistoryPanel repoId={repoId} envId={envId} templateId={row.id} />
+                      )}
+                    </>
                   )}
                 </li>
               ))}
@@ -161,9 +194,21 @@ export function VariablePanel({ repoId, envId, initialVariables, canManage, canR
             />
           )}
 
-          {/* Add variable button */}
-          {!showAddForm && canManage && (
-            <div className={`${variables.length > 0 ? 'border-t border-gray-100' : ''} px-5 py-3`}>
+          {/* Import .env.example form */}
+          {showImportForm && canManage && (
+            <ImportVariablesForm
+              repoId={repoId}
+              envId={envId}
+              onImported={onTemplatesBulkAdded}
+              onCancel={() => setShowImportForm(false)}
+            />
+          )}
+
+          {/* Toolbar: add + import */}
+          {!showAddForm && !showImportForm && canManage && (
+            <div
+              className={`${variables.length > 0 ? 'border-t border-gray-100' : ''} flex items-center gap-4 px-5 py-3`}
+            >
               <button
                 onClick={() => setShowAddForm(true)}
                 className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900"
@@ -172,6 +217,13 @@ export function VariablePanel({ repoId, envId, initialVariables, canManage, canR
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
                 Add variable
+              </button>
+              <span className="text-gray-200">|</span>
+              <button
+                onClick={() => setShowImportForm(true)}
+                className="text-sm text-gray-400 hover:text-gray-700"
+              >
+                Import .env.example
               </button>
             </div>
           )}
@@ -190,6 +242,8 @@ function ViewRow({
   revealed,
   canManage,
   canReveal,
+  isHistoryOpen,
+  onToggleHistory,
   onSetValue,
   onEditTemplate,
   onDelete,
@@ -202,6 +256,8 @@ function ViewRow({
   revealed: { value: string; expiresAt: number } | null
   canManage: boolean
   canReveal: boolean
+  isHistoryOpen: boolean
+  onToggleHistory: () => void
   onSetValue: () => void
   onEditTemplate: () => void
   onDelete: () => void
@@ -306,6 +362,14 @@ function ViewRow({
 
         {/* Action buttons */}
         <div className="flex items-center gap-2">
+          {row.hasSecret && (
+            <button
+              onClick={onToggleHistory}
+              className={`text-xs ${isHistoryOpen ? 'font-medium text-gray-700' : 'text-gray-400 hover:text-gray-700'}`}
+            >
+              History
+            </button>
+          )}
           {canReveal && row.hasSecret && !revealed && (
             <button
               onClick={handleReveal}
@@ -708,6 +772,188 @@ function AddVariableForm({
           </button>
         </div>
       </form>
+    </div>
+  )
+}
+
+// ─── HistoryPanel ─────────────────────────────────────────────────────────────
+
+function HistoryPanel({
+  repoId,
+  envId,
+  templateId,
+}: {
+  repoId: string
+  envId: string
+  templateId: string
+}) {
+  const [data, setData] = useState<HistoryData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch(`/api/repos/${repoId}/environments/${envId}/values/${templateId}/history`)
+      .then((r) => r.json())
+      .then((d: HistoryData) => setData(d))
+      .catch(() => setError('Failed to load history'))
+      .finally(() => setLoading(false))
+  }, [repoId, envId, templateId])
+
+  return (
+    <div className="mt-3 rounded-md border border-gray-100 bg-gray-50 p-3">
+      {loading && <p className="text-xs text-gray-400">Loading history…</p>}
+      {error && <p className="text-xs text-red-500">{error}</p>}
+      {data && data.versions.length === 0 && (
+        <p className="text-xs text-gray-400">No version history yet.</p>
+      )}
+      {data && data.versions.length > 0 && (
+        <>
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+            Version history ({data.totalVersions})
+          </p>
+          <ul className="space-y-1.5">
+            {data.versions.map((v, i) => (
+              <li key={v.version} className="flex items-center gap-2.5 text-xs">
+                <span className="w-8 shrink-0 font-mono font-semibold text-gray-700">
+                  v{v.version}
+                </span>
+                {i === 0 && (
+                  <span className="rounded bg-green-50 px-1.5 py-0.5 text-[10px] font-medium text-green-700">
+                    current
+                  </span>
+                )}
+                <span className="text-gray-400">
+                  <RelativeTime iso={v.createdAt} />
+                </span>
+                {v.createdBy && (
+                  <span className="text-gray-500">by @{v.createdBy}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ─── ImportVariablesForm ───────────────────────────────────────────────────────
+
+function ImportVariablesForm({
+  repoId,
+  envId,
+  onImported,
+  onCancel,
+}: {
+  repoId: string
+  envId: string
+  onImported: (rows: VariableRow[]) => void
+  onCancel: () => void
+}) {
+  const [content, setContent] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<{ created: VariableRow[]; skipped: string[] } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleImport(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    setResult(null)
+    try {
+      const res = await fetch(
+        `/api/repos/${repoId}/environments/${envId}/templates/import`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content }),
+        },
+      )
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.message ?? data.error ?? 'Import failed')
+        return
+      }
+      setResult(data)
+      if (data.created.length > 0) {
+        onImported(data.created)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="border-t border-dashed border-gray-200 bg-gray-50 px-5 py-5">
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-sm font-medium text-gray-700">Import from .env.example</p>
+        <button onClick={onCancel} className="text-xs text-gray-400 hover:text-gray-600">
+          ✕
+        </button>
+      </div>
+      <p className="mb-3 text-xs text-gray-500">
+        Paste the contents of your{' '}
+        <code className="rounded bg-gray-100 px-1 font-mono">.env.example</code> file. Key templates
+        will be created for any keys that don&apos;t already exist. Values are not stored — set
+        secrets separately after import.
+      </p>
+
+      {result ? (
+        <div>
+          <div className="rounded-md border border-green-200 bg-green-50 px-3 py-2">
+            {result.created.length > 0 && (
+              <p className="text-sm font-medium text-green-800">
+                ✓ {result.created.length} variable{result.created.length !== 1 ? 's' : ''} added
+              </p>
+            )}
+            {result.skipped.length > 0 && (
+              <p className="mt-1 text-xs text-green-700">
+                {result.skipped.length} already existed:{' '}
+                {result.skipped.join(', ')}
+              </p>
+            )}
+            {result.created.length === 0 && result.skipped.length === 0 && (
+              <p className="text-sm font-medium text-green-800">No new variables found.</p>
+            )}
+          </div>
+          <button
+            onClick={onCancel}
+            className="mt-3 text-sm text-gray-500 hover:text-gray-800"
+          >
+            Done
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={handleImport}>
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder={
+              '# Database\nDATABASE_URL=\n\n# Auth\nNEXTAUTH_SECRET=\nNEXTAUTH_URL=http://localhost:3000'
+            }
+            rows={8}
+            className="block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-xs shadow-sm placeholder:text-gray-300 focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
+            spellCheck={false}
+          />
+          {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              type="submit"
+              disabled={loading || !content.trim()}
+              className="rounded-md bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-40"
+            >
+              {loading ? 'Importing…' : 'Import variables'}
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="text-sm text-gray-500 hover:text-gray-800"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   )
 }
