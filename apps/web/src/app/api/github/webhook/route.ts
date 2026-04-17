@@ -40,6 +40,9 @@ export async function POST(req: NextRequest) {
     case 'member':
       await handleMemberEvent(payload)
       break
+    case 'repository':
+      await handleRepositoryEvent(payload)
+      break
     default:
       break
   }
@@ -195,6 +198,55 @@ async function handleMemberEvent(payload: MemberPayload) {
       where: { userId: user.id, repoId: repo.id },
       data: { syncedAt: new Date(0) },
     })
+  }
+}
+
+// ─── Repository events ────────────────────────────────────────────────────────
+//
+// Keeps Repo rows in sync when repos are renamed, change visibility, or are
+// deleted. We never hard-delete a Repo on these events — teams keep their
+// variable config even if the repo is removed from the App installation.
+
+type RepositoryPayload = {
+  action: string
+  repository: { id: number; name: string; full_name: string; private: boolean }
+}
+
+async function handleRepositoryEvent(payload: RepositoryPayload) {
+  const repo = await prisma.repo.findFirst({
+    where: { githubRepoId: payload.repository.id },
+  })
+  if (!repo) return
+
+  switch (payload.action) {
+    case 'renamed': {
+      // full_name = "owner/name" — may reflect an org rename too
+      const slash = payload.repository.full_name.indexOf('/')
+      const owner = payload.repository.full_name.slice(0, slash)
+      const name = payload.repository.full_name.slice(slash + 1)
+      await prisma.repo.update({
+        where: { id: repo.id },
+        data: { owner, name, updatedAt: new Date() },
+      })
+      break
+    }
+    case 'publicized':
+      await prisma.repo.update({
+        where: { id: repo.id },
+        data: { private: false, updatedAt: new Date() },
+      })
+      break
+    case 'privatized':
+      await prisma.repo.update({
+        where: { id: repo.id },
+        data: { private: true, updatedAt: new Date() },
+      })
+      break
+    case 'deleted':
+      // Preserve the repo and all variable config. Force a membership re-sync
+      // so stale access isn't served if the App is later re-installed.
+      await syncRepoMemberships(repo.id)
+      break
   }
 }
 
